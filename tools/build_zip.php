@@ -52,7 +52,8 @@ if ($outPath === '') {
 // ---------------------------------------------------------------------------
 // Quy tắc loại trừ
 // ---------------------------------------------------------------------------
-$excludeDirs = ['.git', '.github', 'dist', 'node_modules', '.idea', '.vscode'];
+// docs/ chỉ nằm trên GitHub — không đưa vào gói để ZIP nhẹ và ít inode.
+$excludeDirs = ['.git', '.github', 'dist', 'docs', 'node_modules', '.idea', '.vscode'];
 
 $excludeFiles = ['.DS_Store', 'Thumbs.db', '.gitignore', '.gitattributes', 'desktop.ini'];
 if (!$withConfig) {

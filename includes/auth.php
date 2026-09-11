@@ -16,7 +16,15 @@ function current_user($refresh = false)
             return null;
         }
     }
-    $row = db_one('SELECT * FROM `users` WHERE `id` = ? LIMIT 1', [(int)$_SESSION['user_id']]);
+
+    // Chưa cài đặt xong (hoặc CSDL đang lỗi) thì coi như chưa đăng nhập, để
+    // trình cài đặt và trang lỗi vẫn hiển thị được thay vì dừng giữa đường.
+    try {
+        $row = db_one('SELECT * FROM `users` WHERE `id` = ? LIMIT 1', [(int)$_SESSION['user_id']]);
+    } catch (Exception $ex) {
+        return null;
+    }
+
     if (!$row || $row['status'] !== 'active') {
         auth_logout();
         return null;
@@ -118,7 +126,12 @@ function auth_try_remember()
     }
     list($selector, $validator) = $parts;
 
-    $row = db_one('SELECT * FROM `remember_tokens` WHERE `selector` = ? LIMIT 1', [$selector]);
+    try {
+        $row = db_one('SELECT * FROM `remember_tokens` WHERE `selector` = ? LIMIT 1', [$selector]);
+    } catch (Exception $ex) {
+        // Chưa cài đặt xong hoặc CSDL đang lỗi — không thể khôi phục phiên.
+        return false;
+    }
     if (!$row) {
         return false;
     }

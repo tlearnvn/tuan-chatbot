@@ -380,10 +380,21 @@ select {
 .password-wrap input { padding-right: 2.9rem; }
 
 /* ---------- 8. Bố cục ứng dụng chat --------------------------------------- */
+/* Màn hình chat chiếm trọn chiều cao nhưng vẫn chừa chỗ cho chân trang,
+   để dòng bản quyền và số phiên bản luôn nhìn thấy mà không phải cuộn trang. */
+body.is-chat {
+  display: flex; flex-direction: column;
+  height: 100dvh; overflow: hidden;
+}
+body.is-chat .app-footer { flex: 0 0 auto; }
+
 .chat-app {
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
-  height: 100dvh; overflow: hidden;
+  /* minmax(0, 1fr) để hàng không phình theo nội dung — nhờ vậy ô soạn tin
+     luôn nằm đúng đáy vùng chat thay vì bị đẩy ra ngoài. */
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1; min-height: 0; overflow: hidden;
 }
 .chat-app.sidebar-hidden { grid-template-columns: 0 1fr; }
 
@@ -463,14 +474,17 @@ select {
 .conv-act.danger:hover { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
 
 .sidebar-foot {
-  padding: .7rem .8rem; border-top: 1px solid var(--border);
-  display: flex; align-items: center; gap: .6rem;
+  padding: .7rem .7rem; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: .25rem;
 }
+/* Các nút ở chân thanh bên nhỏ hơn để chừa chỗ cho tên người dùng. */
+.sidebar-foot .icon-btn { width: 34px; height: 34px; font-size: .95rem; }
 .user-chip {
-  display: flex; align-items: center; gap: .6rem; flex: 1; min-width: 0;
-  padding: .4rem .5rem; border-radius: var(--radius); color: inherit;
+  display: flex; align-items: center; gap: .5rem; flex: 1; min-width: 0;
+  padding: .35rem .4rem; border-radius: var(--radius); color: inherit;
   transition: background .18s;
 }
+.user-chip .avatar { width: 32px; height: 32px; font-size: 1.05rem; border-radius: 11px; }
 .user-chip:hover { background: color-mix(in srgb, var(--brand) 9%, transparent); color: inherit; }
 .avatar {
   width: 36px; height: 36px; flex: 0 0 auto; border-radius: 12px;
@@ -483,7 +497,7 @@ select {
 .user-meta small { font-size: .74rem; color: var(--text-muted); }
 
 /* --- Vùng chat --- */
-.chat-main { display: flex; flex-direction: column; min-width: 0; position: relative; }
+.chat-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
 .chat-header {
   display: flex; align-items: center; gap: .7rem;
   padding: .7rem clamp(.8rem, 2vw, 1.4rem);

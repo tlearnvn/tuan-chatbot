@@ -9,6 +9,19 @@ giao diện tiếng Việt tươi vui, chạy được ngay trên **shared hosti
 
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-777bb4) ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-4479a1) ![License](https://img.shields.io/badge/license-MIT-green)
 
+<p align="center">
+  <img src="docs/images/11-tra-loi-latex.webp" alt="Màn hình trò chuyện Tuấn Chatbot" width="820">
+</p>
+
+---
+
+## 📚 Tài liệu
+
+| | |
+|---|---|
+| 📖 [**Hướng dẫn sử dụng**](docs/HUONG-DAN-SU-DUNG.md) | Cài đặt từng bước, cách trò chuyện, đính kèm tệp, quản lý tài khoản và toàn bộ khu vực quản trị — **kèm ảnh minh hoạ từng màn hình** |
+| 🔧 [**Quy trình kỹ thuật**](docs/QUY-TRINH-KY-THUAT.md) | Kiến trúc, vòng đời request, luồng streaming SSE, bộ chuyển đổi AI API, lược đồ CSDL, cách lưu tệp theo khối, bảo mật, quy trình phát hành — **kèm 19 sơ đồ** |
+
 ---
 
 ## ✨ Tính năng

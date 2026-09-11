@@ -6,6 +6,13 @@ Dự án tuân theo [Semantic Versioning](https://semver.org/lang/vi/): `MAJOR.M
 Số phiên bản được hiển thị ở chân trang mọi trang web và có thể tăng tự động
 trong **Quản trị → Phiên bản** hoặc bằng lệnh `php tools/bump.php patch "ghi chú"`.
 
+## [1.1.1] — 2026-09-11
+
+- Thêm tài liệu đầy đủ trong docs/: Hướng dẫn sử dụng kèm 31 ảnh minh hoạ chụp từ ứng dụng thật, và Quy trình kỹ thuật kèm 19 sơ đồ Mermaid.
+- Sửa lỗi chân trang (dòng bản quyền và số phiên bản) bị đẩy ra ngoài khung nhìn ở màn hình trò chuyện.
+- Sửa lỗi tên người dùng bị cắt quá sớm ở chân thanh bên.
+- Sửa lỗi install.php trả về HTTP 500 khi trình duyệt còn cookie ghi nhớ đăng nhập của lần cài trước.
+
 ## [1.1.0] — 2026-09-11 · _Không Inode_
 
 - Chuyển toàn bộ nội dung tệp đính kèm vào MySQL (bảng attachment_chunks), cắt thành nhiều khối theo max_allowed_packet — ứng dụng không còn ghi tệp nào xuống đĩa.
