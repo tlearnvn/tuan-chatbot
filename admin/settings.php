@@ -8,10 +8,10 @@ $fields = [
     'site_name', 'site_tagline', 'brand_emoji', 'copyright', 'welcome_message',
     'allow_register', 'maintenance', 'maintenance_note',
     'max_upload_mb', 'max_files_per_msg', 'allowed_ext', 'history_limit',
-    'show_version', 'github_url', 'theme_primary', 'theme_accent', 'theme_mode',
+    'show_version', 'show_model_name', 'github_url', 'theme_primary', 'theme_accent', 'theme_mode',
     'suggestions', 'admin_email',
 ];
-$checkboxes = ['allow_register', 'maintenance', 'show_version'];
+$checkboxes = ['allow_register', 'maintenance', 'show_version', 'show_model_name'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require();
@@ -170,12 +170,23 @@ admin_head('Cấu hình web', 'settings');
         </select>
       </div>
     </div>
-    <div class="row" style="gap:.6rem">
+    <div class="switch-group">
       <label class="switch">
         <input type="checkbox" name="show_version" value="1" <?= setting_bool('show_version') ? 'checked' : '' ?>>
-        <span class="switch-track"></span><span class="text-sm">Hiện số phiên bản ở chân trang</span>
+        <span class="switch-track"></span><span>Hiện số phiên bản ở chân trang</span>
+      </label>
+      <label class="switch">
+        <input type="checkbox" name="show_model_name" value="1" <?= setting_bool('show_model_name') ? 'checked' : '' ?>>
+        <span class="switch-track"></span><span>Hiện tên mô hình AI trong câu trả lời</span>
       </label>
     </div>
+    <span class="hint">
+      Tắt mục thứ hai nếu bạn không muốn người dùng biết đang dùng mô hình nào
+      (vd: <code class="inline-code">deepseek/deepseek-v4-pro</code>). Tên mô hình sẽ bị loại khỏi
+      mọi dữ liệu gửi ra trình duyệt, không chỉ ẩn trên giao diện — nên không đọc được
+      qua mã nguồn trang. Quản trị viên vẫn thấy để còn đối chiếu khi gỡ lỗi.
+      Người dùng vẫn chọn được endpoint theo <strong>tên hiển thị</strong> mà bạn đặt.
+    </span>
     <div class="field mt-2">
       <label for="github_url">Địa chỉ GitHub của dự án</label>
       <input type="url" id="github_url" name="github_url" value="<?= e(setting('github_url')) ?>"
@@ -186,14 +197,14 @@ admin_head('Cấu hình web', 'settings');
 
   <div class="form-section">
     <h3>🔐 Truy cập</h3>
-    <div class="row" style="gap:1.2rem;flex-wrap:wrap">
+    <div class="switch-group">
       <label class="switch">
         <input type="checkbox" name="allow_register" value="1" <?= setting_bool('allow_register') ? 'checked' : '' ?>>
-        <span class="switch-track"></span><span class="text-sm">Cho phép khách tự đăng ký tài khoản</span>
+        <span class="switch-track"></span><span>Cho phép khách tự đăng ký tài khoản</span>
       </label>
       <label class="switch">
         <input type="checkbox" name="maintenance" value="1" <?= setting_bool('maintenance') ? 'checked' : '' ?>>
-        <span class="switch-track"></span><span class="text-sm">Bật chế độ bảo trì (chỉ quản trị viên dùng được)</span>
+        <span class="switch-track"></span><span>Bật chế độ bảo trì (chỉ quản trị viên dùng được)</span>
       </label>
     </div>
     <div class="field mt-2">

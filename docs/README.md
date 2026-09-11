@@ -1,6 +1,6 @@
 # 📚 Tài liệu Tuấn Chatbot
 
-Tài liệu đầy đủ cho phiên bản **v1.1.0 «Không Inode»**.
+Tài liệu đầy đủ cho Tuấn Chatbot — xem [CHANGELOG](../CHANGELOG.md) để biết phiên bản mới nhất.
 
 | Tài liệu | Dành cho | Nội dung |
 |---|---|---|

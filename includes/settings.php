@@ -20,6 +20,7 @@ function settings_defaults()
         'allowed_ext'       => 'jpg,jpeg,png,gif,webp,bmp,svg,pdf,txt,md,csv,json,xml,html,htm,css,js,ts,py,php,java,c,cpp,cs,go,rb,rs,sql,yml,yaml,ini,log,doc,docx,xls,xlsx,ppt,pptx,zip,rar,7z,mp3,wav,ogg,m4a,mp4,webm,mov',
         'history_limit'     => '20',
         'show_version'      => '1',
+        'show_model_name'   => '1',
         'github_url'        => 'https://github.com/tlearnvn/tuan-chatbot',
         'theme_primary'     => '#7c5cff',
         'theme_accent'      => '#ff5c9d',
@@ -103,6 +104,28 @@ function settings_save(array $pairs)
 function site_name()
 {
     return setting('site_name');
+}
+
+/**
+ * Người đang xem có được thấy tên mô hình AI hay không.
+ *
+ * Khi quản trị viên tắt thiết lập `show_model_name`, tên mô hình bị loại khỏi
+ * MỌI dữ liệu gửi ra trình duyệt (không chỉ ẩn bằng CSS) nên không đọc được
+ * qua mã nguồn trang hay công cụ nhà phát triển. Quản trị viên vẫn thấy để
+ * còn đối chiếu khi gỡ lỗi.
+ */
+function can_see_model_name()
+{
+    if (setting_bool('show_model_name')) {
+        return true;
+    }
+    return function_exists('is_admin') && is_admin();
+}
+
+/** Lọc tên mô hình khỏi dữ liệu trả về nếu người xem không được phép thấy. */
+function filter_model_name($model)
+{
+    return can_see_model_name() ? (string)$model : '';
 }
 
 /** Danh sách câu gợi ý ở màn hình chào. */

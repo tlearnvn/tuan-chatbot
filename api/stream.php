@@ -184,7 +184,8 @@ sse('start', [
     'userMessageId'  => $userMessageId,
     'title'          => $conv['title'],
     'isNew'          => $newConversation,
-    'endpoint'       => ['id' => (int)$endpoint['id'], 'name' => $endpoint['name'], 'model' => $endpoint['model']],
+    'endpoint'       => ['id' => (int)$endpoint['id'], 'name' => $endpoint['name'],
+                         'model' => filter_model_name($endpoint['model'])],
 ]);
 
 $startedAt   = microtime(true);
@@ -300,7 +301,7 @@ if ($status === 'error') {
         'messageId'  => $assistantId,
         'content'    => $fullText,
         'reasoning'  => $fullReason,
-        'model'      => $modelUsed,
+        'model'      => filter_model_name($modelUsed),
         'status'     => $status,
         'durationMs' => $durationMs,
         'tokens'     => $usage,

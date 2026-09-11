@@ -48,7 +48,7 @@ $bootstrapData = [
         return [
             'id'      => (int)$ep['id'],
             'name'    => $ep['name'],
-            'model'   => $ep['model'],
+            'model'   => filter_model_name($ep['model']),
             'desc'    => $ep['description'],
             'vision'  => (int)$ep['supports_vision'] === 1,
             'files'   => (int)$ep['supports_files'] === 1,

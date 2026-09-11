@@ -6,6 +6,12 @@ Dự án tuân theo [Semantic Versioning](https://semver.org/lang/vi/): `MAJOR.M
 Số phiên bản được hiển thị ở chân trang mọi trang web và có thể tăng tự động
 trong **Quản trị → Phiên bản** hoặc bằng lệnh `php tools/bump.php patch "ghi chú"`.
 
+## [1.1.2] — 2026-09-11
+
+- Thêm thiết lập ẩn tên mô hình AI: khi tắt, tên mô hình (vd deepseek/deepseek-v4-pro) bị loại khỏi mọi dữ liệu gửi ra trình duyệt nên không đọc được qua mã nguồn trang; quản trị viên vẫn thấy và cơ sở dữ liệu vẫn lưu tên thật.
+- Sửa lỗi công tắc bật/tắt bị vỡ hoàn toàn trong trang sửa endpoint: quy tắc .field > label ép display:block khiến track mất hộp và núm trắng đè lên chữ.
+- Chuẩn hoá lại kiểu công tắc: track rõ hơn khi tắt, có viền trong, hiệu ứng hover, viền focus, và nhóm .switch-group cho các công tắc xếp dọc.
+
 ## [1.1.1] — 2026-09-11
 
 - Thêm tài liệu đầy đủ trong docs/: Hướng dẫn sử dụng kèm 31 ảnh minh hoạ chụp từ ứng dụng thật, và Quy trình kỹ thuật kèm 19 sơ đồ Mermaid.

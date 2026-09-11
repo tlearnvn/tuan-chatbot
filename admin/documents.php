@@ -171,7 +171,7 @@ admin_head('Tài liệu đi kèm', 'documents');
 
       <label class="switch mb-2">
         <input type="checkbox" name="is_active" value="1" <?= (!$editDoc || (int)$editDoc['is_active'] === 1) ? 'checked' : '' ?>>
-        <span class="switch-track"></span><span class="text-sm">Đang sử dụng</span>
+        <span class="switch-track"></span><span>Đang sử dụng</span>
       </label>
 
       <div class="row row-end">

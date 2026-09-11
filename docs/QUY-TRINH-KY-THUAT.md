@@ -1,6 +1,6 @@
 # 🔧 Quy trình kỹ thuật Tuấn Chatbot
 
-> Tài liệu dành cho lập trình viên · phiên bản **v1.1.0**
+> Tài liệu dành cho lập trình viên · xem [CHANGELOG](../CHANGELOG.md) để biết phiên bản mới nhất
 > Mọi sơ đồ trong tài liệu này viết bằng Mermaid nên GitHub hiển thị trực tiếp.
 
 ---
@@ -310,6 +310,35 @@ flowchart TD
     style TXT fill:#e3f2fd,stroke:#5ca8ff
     style NOTE fill:#fff3e0,stroke:#e08a1e
 ```
+
+### Ẩn tên mô hình
+
+Thiết lập `show_model_name` quyết định người dùng có thấy tên mô hình hay không.
+Nguyên tắc: **lọc ở máy chủ, không ẩn ở giao diện** — nếu chỉ ẩn bằng CSS thì
+tên mô hình vẫn đọc được qua mã nguồn trang.
+
+```mermaid
+flowchart TD
+    A["can_see_model_name()"] --> B{"setting show_model_name?"}
+    B -->|"bật"| OK["trả về tên mô hình"]
+    B -->|"tắt"| C{"người xem là admin?"}
+    C -->|"có"| OK
+    C -->|"không"| EMPTY["trả về chuỗi rỗng"]
+
+    OK & EMPTY --> D["filter_model_name() được gọi ở 4 chỗ ra trình duyệt"]
+    D --> D1["api_format_message — lịch sử chat"]
+    D --> D2["stream.php sự kiện start — endpoint.model"]
+    D --> D3["stream.php sự kiện done — model"]
+    D --> D4["index.php bootstrapData — endpoints[].model"]
+
+    E[("messages.model trong CSDL")] -.->|"luôn lưu tên thật"| F["admin/chat_view.php<br/>hiển thị đầy đủ"]
+
+    style EMPTY fill:#ffebee,stroke:#e5484d
+    style OK fill:#e8f5e9,stroke:#2f9e6e
+```
+
+Cơ sở dữ liệu vẫn lưu tên mô hình thật để quản trị viên đối chiếu; chỉ dữ liệu
+gửi ra trình duyệt của người dùng thường bị lọc.
 
 ### Diễn giải lỗi
 

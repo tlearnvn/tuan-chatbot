@@ -1,6 +1,7 @@
 # 📖 Hướng dẫn sử dụng Tuấn Chatbot
 
-> Phiên bản **v1.1.0 «Không Inode»** · Toàn bộ thời gian trong hệ thống dùng **giờ Việt Nam (UTC+7)**
+> Toàn bộ thời gian trong hệ thống dùng **giờ Việt Nam (UTC+7)** ·
+> Phiên bản đang chạy luôn hiện ở **chân trang** và tại `/changelog.php`
 
 ---
 
@@ -413,7 +414,7 @@ Vì mọi dữ liệu nằm trong MySQL, đây là trang để theo dõi **dung 
 | Nhóm | Tuỳ chỉnh được |
 |---|---|
 | **Thương hiệu** | Tên website, emoji thương hiệu (làm luôn favicon), khẩu hiệu, **dòng bản quyền ở chân trang**, lời chào, 4 câu gợi ý |
-| **Màu sắc** | Màu chính, màu nhấn, giao diện mặc định sáng/tối, hiện/ẩn số phiên bản, địa chỉ GitHub |
+| **Màu sắc & giao diện** | Màu chính, màu nhấn, giao diện mặc định sáng/tối, hiện/ẩn số phiên bản, **hiện/ẩn tên mô hình AI**, địa chỉ GitHub |
 | **Truy cập** | Bật/tắt đăng ký, chế độ bảo trì kèm thông báo, email liên hệ |
 | **Tệp & ngữ cảnh** | Dung lượng tối đa mỗi tệp, số tệp mỗi tin nhắn, số tin nhắn ngữ cảnh, danh sách định dạng được phép |
 
@@ -423,6 +424,25 @@ và `max_allowed_packet` của MySQL.
 
 > Các định dạng có thể thực thi (`php`, `sh`, `exe`…) **luôn bị chặn**, dù bạn có
 > thêm vào danh sách cho phép. Ô nhập cũng từ chối lưu nếu bạn thử thêm chúng.
+
+#### Ẩn tên mô hình AI
+
+Mặc định, cuối mỗi câu trả lời có ghi tên mô hình đã dùng, ví dụ
+`deepseek/deepseek-v4-pro`. Nếu bạn không muốn người dùng biết mình đang dùng
+dịch vụ nào, hãy **tắt** *"Hiện tên mô hình AI trong câu trả lời"* trong
+*Cấu hình web → Màu sắc & giao diện*.
+
+Khi tắt:
+
+| | |
+|---|---|
+| Người dùng thường | Không thấy tên mô hình ở bất kỳ đâu. Tên mô hình bị **loại khỏi mọi dữ liệu gửi ra trình duyệt**, không chỉ ẩn bằng CSS — nên cũng không đọc được qua *View source* hay công cụ nhà phát triển. |
+| Quản trị viên | Vẫn thấy bình thường, để còn đối chiếu khi gỡ lỗi. |
+| Cơ sở dữ liệu | Vẫn lưu tên mô hình thật của từng tin nhắn, nên *Lịch sử chat* trong khu quản trị không mất thông tin. |
+| Hộp chọn mô hình | Vẫn hoạt động — người dùng chọn theo **tên hiển thị** mà bạn tự đặt cho endpoint (vd: *"Trợ lý nhanh"*, *"Trợ lý suy luận sâu"*). |
+
+> 💡 Vì người dùng chọn endpoint theo tên hiển thị, bạn nên đặt tên thân thiện
+> thay vì để trùng tên mô hình — như vậy việc ẩn mới trọn vẹn.
 
 ### 6.8. Nhật ký
 
@@ -512,6 +532,12 @@ Hoặc tạo file PHP tạm trên hosting:
 ```
 
 Chạy nó để lấy chuỗi băm, dán vào câu SQL trên, rồi **xoá file tạm ngay**.
+
+### Làm sao để người dùng không biết tôi dùng mô hình nào?
+
+Tắt *"Hiện tên mô hình AI trong câu trả lời"* trong *Cấu hình web*, và đặt
+**tên hiển thị** của endpoint theo ý bạn thay vì trùng tên mô hình.
+Xem chi tiết ở mục [Ẩn tên mô hình AI](#ẩn-tên-mô-hình-ai).
 
 ### Muốn đổi tên website hoặc dòng bản quyền
 

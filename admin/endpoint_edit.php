@@ -183,14 +183,16 @@ admin_head(($isNew ? 'Thêm' : 'Sửa') . ' endpoint AI', 'endpoints');
       </div>
       <div class="field">
         <span class="label">Trạng thái</span>
-        <label class="switch mb-1">
-          <input type="checkbox" name="is_active" value="1" <?= (int)$form['is_active'] === 1 ? 'checked' : '' ?>>
-          <span class="switch-track"></span><span class="text-sm">Đang bật</span>
-        </label>
-        <label class="switch">
-          <input type="checkbox" name="is_default" value="1" <?= (int)$form['is_default'] === 1 ? 'checked' : '' ?>>
-          <span class="switch-track"></span><span class="text-sm">Đặt làm mặc định</span>
-        </label>
+        <div class="switch-group">
+          <label class="switch">
+            <input type="checkbox" name="is_active" value="1" <?= (int)$form['is_active'] === 1 ? 'checked' : '' ?>>
+            <span class="switch-track"></span><span>Đang bật</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" name="is_default" value="1" <?= (int)$form['is_default'] === 1 ? 'checked' : '' ?>>
+            <span class="switch-track"></span><span>Đặt làm mặc định</span>
+          </label>
+        </div>
       </div>
     </div>
   </div>
@@ -222,7 +224,7 @@ admin_head(($isNew ? 'Thêm' : 'Sửa') . ' endpoint AI', 'endpoints');
           <?php if ($savedKey !== ''): ?>
             <label class="switch mt-1">
               <input type="checkbox" name="clear_api_key" value="1">
-              <span class="switch-track"></span><span class="text-sm">Xoá API key đang lưu</span>
+              <span class="switch-track"></span><span>Xoá API key đang lưu</span>
             </label>
           <?php endif; ?>
         </span>
@@ -279,18 +281,20 @@ admin_head(($isNew ? 'Thêm' : 'Sửa') . ' endpoint AI', 'endpoints');
       </div>
       <div class="field">
         <span class="label">Khả năng hỗ trợ</span>
-        <label class="switch mb-1">
-          <input type="checkbox" name="supports_stream" value="1" <?= (int)$form['supports_stream'] === 1 ? 'checked' : '' ?>>
-          <span class="switch-track"></span><span class="text-sm">⚡ Trả lời theo luồng</span>
-        </label>
-        <label class="switch mb-1">
-          <input type="checkbox" name="supports_vision" value="1" <?= (int)$form['supports_vision'] === 1 ? 'checked' : '' ?>>
-          <span class="switch-track"></span><span class="text-sm">🖼️ Đọc được ảnh</span>
-        </label>
-        <label class="switch">
-          <input type="checkbox" name="supports_files" value="1" <?= (int)$form['supports_files'] === 1 ? 'checked' : '' ?>>
-          <span class="switch-track"></span><span class="text-sm">📎 Nhận tệp (PDF…)</span>
-        </label>
+        <div class="switch-group">
+          <label class="switch">
+            <input type="checkbox" name="supports_stream" value="1" <?= (int)$form['supports_stream'] === 1 ? 'checked' : '' ?>>
+            <span class="switch-track"></span><span>⚡ Trả lời theo luồng</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" name="supports_vision" value="1" <?= (int)$form['supports_vision'] === 1 ? 'checked' : '' ?>>
+            <span class="switch-track"></span><span>🖼️ Đọc được ảnh</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" name="supports_files" value="1" <?= (int)$form['supports_files'] === 1 ? 'checked' : '' ?>>
+            <span class="switch-track"></span><span>📎 Nhận tệp (PDF…)</span>
+          </label>
+        </div>
       </div>
     </div>
   </div>
