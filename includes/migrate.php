@@ -7,7 +7,17 @@
  */
 
 /** Số hiệu lược đồ mà mã nguồn hiện tại yêu cầu. */
-define('DB_SCHEMA_VERSION', 2);
+define('DB_SCHEMA_VERSION', 3);
+
+/**
+ * Các định dạng tài liệu mà bản 1.1.3 mới đọc được nội dung.
+ * Migration sẽ thêm chúng vào thiết lập `allowed_ext` của bản cài cũ, nếu không
+ * người dùng vẫn bị chặn khi tải lên dù máy chủ đã đọc được.
+ */
+function migrate_new_readable_extensions()
+{
+    return ['odt', 'ods', 'odp', 'rtf', 'epub', 'tsv', 'markdown', 'srt', 'vtt'];
+}
 
 /** Bảng đã có cột này chưa? */
 function db_column_exists($table, $column)
@@ -87,6 +97,34 @@ function db_migrate($force = false)
             db()->exec("ALTER TABLE `attachments` MODIFY `stored_name` VARCHAR(255) NOT NULL DEFAULT ''");
         } catch (Exception $ex) {
             // Không quan trọng nếu đã đúng định dạng.
+        }
+    }
+
+    // --- Lược đồ 3: ghi lại lý do không đọc được nội dung tệp ---------------
+    if (db_table_exists('attachments') && !db_column_exists('attachments', 'extract_status')) {
+        db()->exec(
+            "ALTER TABLE `attachments`
+               ADD COLUMN `extract_status` VARCHAR(32) NOT NULL DEFAULT '' AFTER `extracted_text`"
+        );
+        $done[] = 'Thêm cột `attachments.extract_status` để ghi lý do không đọc được nội dung tệp.';
+    }
+
+    if (db_table_exists('endpoints') && !db_column_exists('endpoints', 'pdf_mode')) {
+        db()->exec(
+            "ALTER TABLE `endpoints`
+               ADD COLUMN `pdf_mode` ENUM('auto','file','text') NOT NULL DEFAULT 'auto'
+               AFTER `supports_stream`"
+        );
+        $done[] = 'Thêm cột `endpoints.pdf_mode` để chọn cách gửi PDF cho từng endpoint.';
+    }
+
+    // Mở thêm các định dạng tài liệu mà bản mới đã đọc được nội dung.
+    $allowed = allowed_extensions();
+    if ($allowed) {
+        $missing = array_values(array_diff(migrate_new_readable_extensions(), $allowed));
+        if ($missing) {
+            setting_set('allowed_ext', implode(',', array_merge($allowed, $missing)));
+            $done[] = 'Cho phép tải lên thêm: ' . implode(', ', $missing) . '.';
         }
     }
 

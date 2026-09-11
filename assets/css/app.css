@@ -682,6 +682,12 @@ a.file-chip:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); b
 }
 .file-chip-remove:hover { color: var(--danger); }
 .file-chip.is-uploading { border-style: dashed; }
+/* Tệp máy chủ không đọc được nội dung: viền cam để người dùng thấy ngay. */
+.file-chip.is-warning {
+  border-color: color-mix(in srgb, var(--warn) 55%, var(--border));
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface-solid));
+}
+.file-chip.is-warning .file-chip-size { color: color-mix(in srgb, var(--warn) 78%, var(--text-soft)); }
 .file-chip .mini-bar { display: block; height: 3px; border-radius: 99px; background: var(--border); margin-top: .25rem; overflow: hidden; }
 .file-chip .mini-bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width .25s var(--ease); }
 
@@ -707,6 +713,19 @@ a.file-chip:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); b
 .composer.is-focus { border-color: var(--brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 13%, transparent), var(--shadow); }
 .composer.is-drag { border-style: dashed; border-color: var(--brand-2); background: color-mix(in srgb, var(--brand-2) 6%, var(--surface-solid)); }
 .composer-files { display: flex; flex-wrap: wrap; gap: .45rem; padding: .7rem .8rem 0; }
+/* Giải thích vì sao tệp chưa đọc được và người dùng nên làm gì. */
+.composer-file-warn {
+  margin: .6rem .8rem 0; padding: .6rem .75rem; border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border));
+  background: color-mix(in srgb, var(--warn) 9%, var(--surface-solid));
+  font-size: .81rem; line-height: 1.5; color: var(--text-soft);
+}
+.composer-file-warn .file-warn-row { margin-bottom: .15rem; }
+.composer-file-warn .file-warn-row b { color: var(--text); }
+.composer-file-warn .file-warn-tip {
+  margin-top: .35rem; padding-top: .35rem; font-size: .78rem; color: var(--text-muted);
+  border-top: 1px dashed color-mix(in srgb, var(--warn) 35%, var(--border));
+}
 .composer-row { display: flex; align-items: flex-end; gap: .45rem; padding: .5rem .6rem .5rem .7rem; }
 .composer textarea {
   flex: 1; border: 0; background: none; resize: none; padding: .55rem .3rem;

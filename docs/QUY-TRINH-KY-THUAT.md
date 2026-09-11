@@ -12,6 +12,9 @@
 3. [Vòng đời một request](#3-vòng-đời-một-request)
 4. [Luồng phản hồi theo thời gian thực (SSE)](#4-luồng-phản-hồi-theo-thời-gian-thực-sse)
 5. [Bộ chuyển đổi AI API](#5-bộ-chuyển-đổi-ai-api)
+   · [Tệp đính kèm thành payload](#tệp-đính-kèm-thành-payload)
+   · [Đọc nội dung tệp](#đọc-nội-dung-tệp--extract_file_content)
+   · [Đọc chữ trong PDF](#đọc-chữ-trong-pdf--includespdfphp)
 6. [Cơ sở dữ liệu](#6-cơ-sở-dữ-liệu)
 7. [Lưu trữ tệp trong cơ sở dữ liệu](#7-lưu-trữ-tệp-trong-cơ-sở-dữ-liệu)
 8. [Phiên đăng nhập trong cơ sở dữ liệu](#8-phiên-đăng-nhập-trong-cơ-sở-dữ-liệu)
@@ -284,6 +287,9 @@ Người dùng chỉ cần nhập URL gốc; hàm này tự thêm đường dẫ
 
 ### Tệp đính kèm thành payload
 
+`ai_message_parts()` chọn một trong ba con đường cho mỗi tệp: gửi nhị phân,
+gửi văn bản đã rút, hoặc gửi thông báo "không đọc được".
+
 ```mermaid
 flowchart TD
     A["Tệp đính kèm"] --> B{"size > 0 và<br/>size ≤ 18 MB?"}
@@ -291,25 +297,148 @@ flowchart TD
     B -->|"có"| C{"kind"}
 
     C -->|"image"| D{"endpoint bật<br/>supports_vision?"}
-    D -->|"có"| BIN["đọc nội dung từ CSDL<br/>→ base64 → khối ảnh"]
-    D -->|"không"| TXT
+    D -->|"có"| BIN["đọc nội dung từ CSDL<br/>→ base64 → khối nhị phân"]
+    D -->|"không"| FAIL
 
-    C -->|"pdf"| E{"supports_files và<br/>api_type ≠ ollama?"}
-    E -->|"có"| BIN
+    C -->|"pdf"| E{"supports_files?"}
     E -->|"không"| TXT
+    E -->|"có"| P{"api_type"}
+    P -->|"anthropic / gemini"| H{"đã rút được chữ<br/>và tệp > 6 MB?"}
+    H -->|"có"| TXT
+    H -->|"không"| BIN
+    P -->|"openai"| I{"đã rút được chữ?"}
+    I -->|"có"| TXT
+    I -->|"không"| BIN
+    P -->|"ollama"| TXT
 
     C -->|"audio / video"| F{"supports_files và<br/>api_type = gemini?"}
     F -->|"có"| BIN
-    F -->|"không"| TXT
+    F -->|"không"| FAIL
 
-    C -->|"text / file"| TXT["đưa extracted_text<br/>vào phần text của prompt"]
-    TXT --> G{"có extracted_text?"}
-    G -->|"không"| NOTE["ghi chú: đã đính kèm tệp X,<br/>hệ thống không đọc được nội dung"]
+    C -->|"text / file"| TXT{{"có extracted_text?"}}
+    TXT -->|"có"| OK["chèn vào phần text:<br/>--- NỘI DUNG TỆP X --- …"]
+    TXT -->|"không"| FAIL["ai_unreadable_notice():<br/>nêu đúng lý do + cấm suy đoán"]
 
     style BIN fill:#e8f5e9,stroke:#2f9e6e
-    style TXT fill:#e3f2fd,stroke:#5ca8ff
-    style NOTE fill:#fff3e0,stroke:#e08a1e
+    style OK fill:#e3f2fd,stroke:#5ca8ff
+    style FAIL fill:#fff3e0,stroke:#e08a1e
 ```
+
+Hai quyết định đáng giải thích:
+
+**Vì sao PDF có chữ lại gửi dạng văn bản cho họ OpenAI?**
+Khối `{"type":"file","file":{…}}` là phần mở rộng khá mới của OpenAI. Rất nhiều
+cổng trung gian tương thích OpenAI (OpenRouter, vLLM, gateway nội bộ) **im lặng
+bỏ qua** khối này: mô hình không nhận được tệp nào, và khi người dùng hỏi "tóm
+tắt nội dung" thì nó tự nghĩ ra một câu trả lời nghe rất hợp lý nhưng chẳng liên
+quan. Gửi phần chữ đã rút vừa chắc chắn tới được mô hình, vừa nhẹ hơn nhiều:
+base64 của một PDF 326 KB tốn hơn 430 KB payload, trong khi phần chữ của cùng
+tệp đó thường chỉ vài chục KB.
+
+**Vì sao Anthropic và Gemini vẫn gửi nhị phân?**
+Hai họ này có khối tệp gốc (`document` / `inline_data`) được đảm bảo hỗ trợ, và
+mô hình đọc được cả bảng biểu, sơ đồ, chữ trong ảnh — chất lượng cao hơn văn bản
+phẳng. Chỉ khi tệp lớn hơn 6 MB mà đã rút được chữ thì mới đổi sang gửi chữ, để
+tránh lỗi HTTP 413 do payload phình thêm 1/3 vì base64.
+
+**Không bao giờ để mô hình đoán.** Khi không có đường nào chuyển được nội dung,
+`ai_unreadable_notice()` chèn một khối thông báo hệ thống nêu tên tệp, lý do cụ
+thể, và yêu cầu dứt khoát: nói thật là chưa đọc được, không suy đoán, không dựa
+vào tên tệp. Trạng thái này lưu ở cột `attachments.extract_status` nên giao diện
+cũng cảnh báo người dùng ngay lúc tải tệp lên.
+
+### Đọc nội dung tệp — `extract_file_content()`
+
+`includes/files.php` điều phối theo phần mở rộng, trả về
+`['text' => …, 'reason' => …]`. `reason` rỗng nghĩa là đọc được; ngược lại là mã
+lý do mà `extract_reason_text()` dịch thành câu tiếng Việt cho người dùng.
+
+| Định dạng | Cách đọc | Phụ thuộc |
+|---|---|---|
+| txt, md, csv, tsv, json, xml, mã nguồn, srt, vtt | đọc trực tiếp | — |
+| html, htm | bỏ `script`/`style`, giữ ngắt dòng ở thẻ khối rồi `strip_tags()` | — |
+| docx, xlsx, pptx | đọc XML trong ZIP (`word/document.xml`, `xl/sharedStrings.xml`…) | `ZipArchive` |
+| odt, ods, odp | đọc `content.xml` trong ZIP | `ZipArchive` |
+| epub | ghép các chương XHTML trong ZIP | `ZipArchive` |
+| zip | liệt kê danh sách mục kèm dung lượng | `ZipArchive` |
+| rtf | bỏ nhóm điều khiển, giải mã `\uN?` và `\'xx` | — |
+| doc, xls, ppt | vớt chuỗi UTF-16LE/CP1252 trong ổ đĩa OLE, lọc tên stream nội bộ | — |
+| pdf | `includes/pdf.php` (xem dưới) | zlib |
+
+> ⚠️ Với `.doc/.xls/.ppt` kết quả chỉ **gần đúng** — định dạng nhị phân OLE cần
+> cả một thư viện để đọc đúng. Mã lý do `legacy_office_partial` khiến prompt kèm
+> câu "nội dung có thể thiếu hoặc lộn xộn", để mô hình không tin tuyệt đối.
+>
+> Với `.doc` tiếng Việt có một cái bẫy: không thể tìm chữ UTF-16LE bằng mẫu
+> "byte in được + `0x00`", vì chữ "ộ" là U+1ED9 nên byte cao là `0x1E`. Mẫu đó
+> sẽ cắt câu ngay tại mỗi dấu thanh. Cách đúng là giải mã cả vùng dữ liệu rồi
+> mới lọc ra các đoạn ra chữ.
+
+### Đọc chữ trong PDF — `includes/pdf.php`
+
+Đây là phần khó nhất, và cũng là phần từng làm người dùng nhận về câu trả lời
+không liên quan. Hầu hết PDF hiện nay **không** chứa chữ ở dạng đọc được:
+
+```
+BT /F4 32 Tf 1 0 0 -1 8 37 Tm
+<00D206AB0003004E004C06AD0050000300570055004400030031004A06D9> Tj
+ET
+```
+
+Chuỗi hex đó là **số hiệu glyph trong bộ phông con được nhúng**, không phải mã
+Unicode: `0x00D2` là glyph thứ 210, và chỉ bảng `/ToUnicode` của chính phông đó
+mới cho biết nó là chữ "Đ". Vì vậy muốn đọc được tiếng Việt trong PDF thì phải
+đi đủ bốn bước:
+
+```mermaid
+flowchart TD
+    A["Tệp PDF"] --> B["pdf_scan_objects()<br/><i>quét N G obj … endobj bằng strpos</i>"]
+    B --> C["pdf_expand_object_streams()<br/><i>giải nén /ObjStm của PDF 1.5+</i>"]
+    C --> D["pdf_find_pages()<br/><i>tìm /Type /Page → /Contents, /Resources</i>"]
+    D --> E["pdf_page_fonts()<br/><i>/Resources /Font: tên → đối tượng phông</i>"]
+    E --> F["pdf_parse_cmap()<br/><i>beginbfchar / beginbfrange → mã glyph ⇒ Unicode</i>"]
+    D --> G["pdf_stream_data()<br/><i>Flate / ASCIIHex / ASCII85 / RunLength</i>"]
+    G --> H["pdf_content_to_text()<br/><i>Tf, Tj, TJ, nháy đơn, nháy kép, Td, TD, Tm</i>"]
+    F --> H
+    H --> I{"rút được chữ?"}
+    I -->|"có"| J["văn bản UTF-8"]
+    I -->|"không"| K{"có gặp glyph nào?"}
+    K -->|"có"| L["reason = no_tounicode<br/><i>phông thiếu bảng ánh xạ</i>"]
+    K -->|"không"| M["reason = no_text<br/><i>PDF scan, chỉ có ảnh</i>"]
+
+    style J fill:#e8f5e9,stroke:#2f9e6e
+    style L fill:#fff3e0,stroke:#e08a1e
+    style M fill:#fff3e0,stroke:#e08a1e
+```
+
+Những chỗ dễ sai mà mã nguồn đã xử lý:
+
+| Vấn đề | Cách giải quyết |
+|---|---|
+| `preg_match_all` trên PDF vài MB | Quét đối tượng bằng `strpos`, không bằng một regex lớn — `pcre.backtrack_limit` mặc định 1 triệu khiến regex trả về `false` mà không báo lỗi |
+| Trang và phông nằm trong `/ObjStm` (Word, Google Docs) | Giải nén luồng đối tượng rồi đăng ký từng từ điển bên trong |
+| Chuỗi hex `<…>` và chuỗi literal `(…)` | Bộ tách token xử lý cả hai, kể cả ngoặc lồng và dấu thoát bát phân |
+| Toán tử `'` và `"` | Xuống dòng rồi hiển thị chữ, đúng như đặc tả |
+| Xuống dòng | `Tm` đổi toạ độ dọc ⇒ dòng mới; `Td`/`TD` lệch dọc ⇒ dòng mới |
+| Chữ bị xé thành "T rình" | Chrome và Word dùng `Td` để đặt **từng con chữ**; bước nhảy ngang chính là bề rộng chữ liền trước, nên chỉ coi là khoảng trắng khi vượt 1,5 em |
+| Phông Identity-H không có `/ToUnicode` | Thà trả về rỗng kèm `reason = no_tounicode` còn hơn trả về chữ rác |
+| Ảnh nội tuyến `BI … ID … EI` | Nhảy qua toàn bộ, vì dữ liệu nhị phân bên trong có thể chứa bất cứ byte nào |
+| PDF đặt mật khẩu | Phát hiện `/Encrypt` và báo `reason = encrypted` thay vì đọc ra rác |
+| Tệp lớn | Giới hạn số đối tượng, cỡ luồng sau giải nén, và dừng sớm khi đã đủ ký tự |
+
+Chi phí thực đo trên PDF 538 KB (6.000 dòng chữ): **≈ 120 ms, 4 MB bộ nhớ đỉnh**.
+
+### Tự kiểm tra
+
+`tools/selftest.php` dựng tệp mẫu ngay trong bộ nhớ (PDF kiểu Chrome, PDF kiểu
+pdflatex, PDF 1.5 có `/ObjStm`, PDF scan, PDF thiếu `/ToUnicode`, PDF mã hoá,
+ODT, DOCX, EPUB, ZIP, RTF, HTML, DOC của Office 97) rồi kiểm tra kết quả đọc:
+
+```bash
+php tools/selftest.php
+```
+
+Chạy lệnh này sau mỗi lần sửa phần xử lý tệp. Không cần cơ sở dữ liệu hay mạng.
 
 ### Ẩn tên mô hình
 
@@ -762,13 +891,20 @@ flowchart TD
     A["Mở bất kỳ trang trong admin/"] --> B["admin/_init.php gọi db_migrate()"]
     B --> C{"setting schema_version<br/>≥ DB_SCHEMA_VERSION?"}
     C -->|"có"| D["thoát ngay<br/><i>không truy vấn gì thêm</i>"]
-    C -->|"chưa"| E["tạo bảng còn thiếu<br/>attachment_chunks · sessions"]
-    E --> F["thêm cột còn thiếu<br/>attachments.storage"]
-    F --> G["đánh dấu tệp cũ storage='file'<br/><i>vẫn đọc được bình thường</i>"]
-    G --> H["ghi schema_version mới + log_activity"]
+    C -->|"chưa"| E["v2: tạo bảng còn thiếu<br/>attachment_chunks · sessions"]
+    E --> F["v2: thêm cột attachments.storage"]
+    F --> G["v2: đánh dấu tệp cũ storage='file'<br/><i>vẫn đọc được bình thường</i>"]
+    G --> I["v3: thêm cột attachments.extract_status"]
+    I --> J["v3: mở thêm đuôi tệp mới đọc được<br/>odt · ods · odp · rtf · epub · tsv…"]
+    J --> H["ghi schema_version mới + log_activity"]
 
     style D fill:#e8f5e9,stroke:#2f9e6e
 ```
+
+Mỗi bước đều tự kiểm tra trước khi làm (`db_table_exists`, `db_column_exists`,
+so sánh danh sách đuôi tệp) nên chạy lại nhiều lần cũng không sinh thêm thay đổi.
+Bước mở thêm đuôi tệp chỉ **thêm vào** danh sách `allowed_ext` của quản trị viên,
+không xoá hay ghi đè lựa chọn cũ.
 
 Chuyển tệp cũ sang CSDL là **thao tác tay, theo từng lô** (mặc định 25 tệp/lần) để
 không vượt thời gian thực thi của PHP:

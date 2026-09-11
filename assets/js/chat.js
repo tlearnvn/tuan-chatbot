@@ -37,6 +37,7 @@
     attach:     document.getElementById('btnAttach'),
     fileInput:  document.getElementById('fileInput'),
     files:      document.getElementById('composerFiles'),
+    fileWarn:   document.getElementById('composerFileWarn'),
     title:      document.getElementById('chatTitle'),
     titleText:  document.getElementById('chatTitleText'),
     subtitle:   document.getElementById('chatSubtitle'),
@@ -413,6 +414,7 @@
     if (!state.pendingFiles.length) {
       el.files.classList.add('hidden');
       el.files.innerHTML = '';
+      renderFileWarnings();
       updateSendState();
       return;
     }
@@ -424,14 +426,46 @@
                '<span class="file-chip-meta"><span class="file-chip-name">' + esc(file.name) + '</span>' +
                '<span class="mini-bar"><i style="width:' + (file.progress || 0) + '%"></i></span></span></span>';
       }
-      return '<span class="file-chip">' +
-             '<span class="file-chip-icon">' + esc(file.icon || '📎') + '</span>' +
+      // Cho người dùng thấy ngay tệp nào đã đọc được nội dung, tệp nào chưa —
+      // để không chờ mô hình tóm tắt một tệp mà nó chưa từng nhìn thấy.
+      var note = '', cls = '';
+      if (file.hasText) {
+        note = ' · đã đọc nội dung';
+      } else if (file.needsModel) {
+        note = ' · gửi trực tiếp cho AI';
+      } else if (file.note) {
+        note = ' · chưa đọc được nội dung';
+        cls  = ' is-warning';
+      }
+      return '<span class="file-chip' + cls + '"' +
+             (file.note ? ' title="' + esc(file.note) + '"' : '') + '>' +
+             '<span class="file-chip-icon">' + esc(cls ? '⚠️' : (file.icon || '📎')) + '</span>' +
              '<span class="file-chip-meta"><span class="file-chip-name">' + esc(file.name) + '</span>' +
-             '<span class="file-chip-size">' + esc(file.sizeText || '') +
-             (file.hasText ? ' · đã đọc nội dung' : '') + '</span></span>' +
+             '<span class="file-chip-size">' + esc(file.sizeText || '') + esc(note) + '</span></span>' +
              '<button type="button" class="file-chip-remove" data-remove="' + index + '" title="Bỏ tệp">×</button></span>';
     }).join('');
+    renderFileWarnings();
     updateSendState();
+  }
+
+  /* Dải cảnh báo dưới khung nhập: nói rõ vì sao tệp chưa đọc được và nên làm gì. */
+  function renderFileWarnings() {
+    if (!el.fileWarn) return;
+    var bad = state.pendingFiles.filter(function (f) {
+      return !f.uploading && !f.hasText && !f.needsModel && f.note;
+    });
+    if (!bad.length) {
+      el.fileWarn.classList.add('hidden');
+      el.fileWarn.innerHTML = '';
+      return;
+    }
+    el.fileWarn.classList.remove('hidden');
+    el.fileWarn.innerHTML = bad.map(function (f) {
+      return '<div class="file-warn-row"><b>' + esc(f.name) + '</b> — ' + esc(f.note) + '</div>';
+    }).join('') +
+      '<div class="file-warn-tip">Bạn vẫn gửi được, nhưng AI sẽ trả lời là chưa đọc được tệp. ' +
+      'Cách xử lý: dán nội dung trực tiếp vào khung chat, lưu tệp thành .docx/.txt, ' +
+      'hoặc bật “Nhận tệp” cho endpoint để gửi nguyên bản cho AI.</div>';
   }
 
   function clearPendingFiles() {
@@ -513,7 +547,14 @@
         data.errors.forEach(function (msg) { window.toast('warning', msg); });
       }
       if (data.files.length) {
-        window.toast('success', 'Đã đính kèm ' + data.files.length + ' tệp.');
+        // Nói rõ ngay lúc tải lên nếu có tệp máy chủ chưa đọc được nội dung.
+        var unread = data.files.filter(function (f) { return !f.hasText && !f.needsModel; });
+        if (unread.length) {
+          window.toast('warning', 'Đã đính kèm ' + data.files.length + ' tệp, nhưng ' +
+            unread.length + ' tệp chưa đọc được nội dung — xem ghi chú bên dưới khung nhập.');
+        } else {
+          window.toast('success', 'Đã đính kèm ' + data.files.length + ' tệp.');
+        }
       }
       renderPendingFiles();
     });

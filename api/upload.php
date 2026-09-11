@@ -86,11 +86,17 @@ for ($i = 0; $i < $count; $i++) {
     }
 
     // Trích xuất văn bản ngay từ tệp tạm của PHP, trước khi tệp tạm bị xoá.
+    // Khi không đọc được, `status` cho biết vì sao — để nói rõ với người dùng
+    // và để nhắc mô hình không tự nghĩ ra nội dung.
     $extracted = '';
+    $status    = '';
     try {
-        $extracted = extract_text_from_file($tmpName, $kind, $ext);
-    } catch (Exception $ex) {
+        $content   = extract_file_content($tmpName, $kind, $ext);
+        $extracted = $content['text'];
+        $status    = $content['reason'];
+    } catch (Throwable $ex) {
         $extracted = '';
+        $status    = 'unsupported';
     }
 
     // Tạo bản ghi trước để có id, rồi ghi nội dung theo từng khối vào CSDL.
@@ -106,6 +112,7 @@ for ($i = 0; $i < $count; $i++) {
         'size'            => $size,
         'kind'            => $kind,
         'extracted_text'  => $extracted !== '' ? $extracted : null,
+        'extract_status'  => mb_substr($status, 0, 32),
         'created_at'      => now_vn(),
     ]);
 
@@ -135,6 +142,9 @@ for ($i = 0; $i < $count; $i++) {
         'url'           => 'api/download.php?id=' . $id,
         'hasText'       => $extracted !== '',
         'textLength'    => mb_strlen($extracted),
+        'status'        => $status,
+        'note'          => extract_reason_text($status, $kind),
+        'needsModel'    => in_array($status, ['needs_vision', 'needs_media'], true),
     ];
 }
 

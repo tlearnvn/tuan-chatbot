@@ -181,6 +181,7 @@ layout_head('Trò chuyện', ['body_class' => 'is-chat']);
       <div class="composer-wrap">
         <form class="composer" id="composer" autocomplete="off">
           <div class="composer-files hidden" id="composerFiles"></div>
+          <div class="composer-file-warn hidden" id="composerFileWarn" role="status"></div>
           <div class="composer-row">
             <button type="button" class="icon-btn" id="btnAttach" title="Đính kèm tệp (tối đa <?= (int)$maxUploadMb ?>MB)">📎</button>
             <label class="sr-only" for="messageInput">Nội dung tin nhắn</label>

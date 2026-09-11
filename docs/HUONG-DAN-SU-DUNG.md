@@ -224,17 +224,39 @@ Ba cách đính kèm:
 
 | Loại tệp | Cách xử lý |
 |---|---|
+| **PDF** có chữ | Tự đọc chữ trong tệp (kể cả tiếng Việt có dấu, PDF in từ Chrome/Word/Google Docs) rồi đưa vào ngữ cảnh. Với Anthropic và Gemini thì gửi thẳng cả tệp PDF vì hai họ này đọc được cả bảng biểu, hình vẽ |
+| **PDF** scan / chỉ có ảnh | Không có chữ để đọc. Bật *"Nhận tệp"* cho endpoint để gửi nguyên tệp cho mô hình tự nhìn; nếu không, hệ thống báo rõ là chưa đọc được |
 | Ảnh (jpg, png, gif, webp…) | Gửi trực tiếp cho mô hình dưới dạng base64 nếu endpoint bật *"Đọc được ảnh"* |
-| PDF | Gửi trực tiếp cho mô hình (OpenAI / Anthropic / Gemini); nếu không được thì tự rút văn bản |
-| Word, Excel, PowerPoint | Tự đọc phần văn bản trong tệp rồi đưa vào ngữ cảnh |
-| txt, md, csv, json, mã nguồn | Đọc nguyên nội dung đưa vào ngữ cảnh |
-| Âm thanh, video | Gửi trực tiếp cho Gemini; các endpoint khác chỉ ghi nhận tên tệp |
-| Tệp nén, tệp lạ | Ghi nhận tên và dung lượng để mô hình biết có tệp |
+| Word, Excel, PowerPoint (docx, xlsx, pptx) | Đọc phần văn bản trong tệp rồi đưa vào ngữ cảnh |
+| OpenDocument (odt, ods, odp) | Đọc phần văn bản trong tệp — dùng cho tệp của LibreOffice và Google Docs |
+| Office 97-2003 (doc, xls, ppt) | Vớt được phần chữ nhưng có thể thiếu; nên lưu lại thành .docx hoặc PDF |
+| RTF, EPUB | Đọc toàn bộ phần chữ |
+| txt, md, csv, tsv, json, xml, mã nguồn, phụ đề srt/vtt | Đọc nguyên nội dung đưa vào ngữ cảnh |
+| HTML | Bỏ thẻ, chỉ giữ phần chữ (đỡ tốn token) |
+| Tệp nén (zip) | Liệt kê danh sách tệp bên trong kèm dung lượng |
+| Âm thanh, video | Gửi trực tiếp cho Gemini; các endpoint khác báo là không xử lý được |
 
-Thẻ tệp hiện dòng *"đã đọc nội dung"* khi hệ thống rút được văn bản từ tệp đó.
+Thẻ tệp cho biết ngay tình trạng của từng tệp:
 
-> 📄 **PDF dạng ảnh scan** không rút được chữ. Với loại này hãy bật *"Nhận tệp"*
-> trong cấu hình endpoint để gửi thẳng PDF cho mô hình.
+- *"đã đọc nội dung"* — hệ thống rút được văn bản, mô hình chắc chắn thấy nội dung.
+- *"gửi trực tiếp cho AI"* — ảnh hoặc tệp đa phương tiện, do mô hình tự xem.
+- *"chưa đọc được nội dung"* (viền cam) — kèm ghi chú nói rõ vì sao và nên làm gì.
+
+![Thẻ tệp cảnh báo khi chưa đọc được nội dung](images/21-tep-chua-doc-duoc.webp)
+
+> 🚫 **Không bao giờ có chuyện AI "tóm tắt" một tệp mà nó chưa đọc được.**
+> Khi nội dung tệp không tới được mô hình, hệ thống gửi kèm một thông báo buộc
+> mô hình phải nói thật là chưa đọc được tệp, tuyệt đối không suy đoán theo tên tệp.
+
+**Nếu tệp chưa đọc được, làm gì?**
+
+| Trường hợp | Cách xử lý |
+|---|---|
+| PDF scan từ máy photocopy | Bật *"Nhận tệp"* cho endpoint (Anthropic, Gemini, OpenAI) để mô hình tự nhìn; hoặc dùng phần mềm OCR trước |
+| PDF dùng phông thiếu bảng Unicode | Mở bằng trình đọc PDF, chọn *In → Lưu thành PDF* để tạo lại tệp |
+| PDF đặt mật khẩu | Bỏ mật khẩu rồi tải lên lại |
+| Tệp .doc/.xls/.ppt cũ | Lưu lại dưới dạng .docx/.xlsx/.pptx hoặc PDF |
+| Ảnh, nhưng endpoint không đọc được ảnh | Chọn endpoint khác có bật *"Đọc được ảnh"* |
 
 ### 4.6. Tệp do AI trả về
 
@@ -339,9 +361,39 @@ Mỗi endpoint là một kết nối tới dịch vụ AI. Các nút thao tác n
 | **Trả lời theo luồng** | Tắt nếu hosting chặn streaming | bật |
 | **Đọc được ảnh** | Cho phép gửi ảnh cho mô hình | bật |
 | **Nhận tệp** | Cho phép gửi PDF cho mô hình | bật |
+| **Cách gửi tệp PDF** | `Tự chọn` / `Luôn gửi nguyên tệp` / `Luôn gửi chữ` — xem giải thích dưới | `Tự chọn` |
 | **System prompt** | Chỉ dẫn vai trò, giọng điệu, quy tắc trả lời | — |
 | **Header HTTP bổ sung** | JSON, hữu ích với OpenRouter | — |
 | **Tham số payload bổ sung** | JSON, hợp nhất vào dữ liệu gửi đi | — |
+
+#### Chọn "Cách gửi tệp PDF" thế nào?
+
+PDF là định dạng duy nhất có **hai đường đi** tới mô hình, nên đây là lựa chọn
+duy nhất cần đến tay quản trị viên:
+
+| Lựa chọn | Khi nào dùng |
+|---|---|
+| **Tự chọn** (khuyến nghị) | Gửi nguyên tệp cho Anthropic và Gemini, gửi chữ đã rút cho họ OpenAI. Tệp trên 6 MB mà đã rút được chữ thì gửi chữ để tránh lỗi 413 |
+| **Luôn gửi nguyên tệp** | Chỉ khi bạn **chắc chắn** cổng API của mình hỗ trợ khối `{"type":"file"}` và muốn mô hình đọc được cả bảng biểu, hình vẽ trong PDF |
+| **Luôn gửi chữ** | Muốn tiết kiệm token tối đa, hoặc PDF của bạn toàn là văn bản thuần |
+
+![Thiết lập cách gửi tệp PDF](images/22-cach-gui-pdf.webp)
+
+Vì sao mặc định **không** gửi nguyên tệp cho họ OpenAI?
+
+- Khối `{"type":"file"}` là phần mở rộng khá mới. Nhiều cổng trung gian tương thích
+  OpenAI (OpenRouter, vLLM, gateway nội bộ của công ty) **âm thầm bỏ qua** nó:
+  mô hình không nhận được tệp nào, và khi bạn hỏi *"tóm tắt nội dung"* thì nó trả
+  về một câu trả lời nghe rất hợp lý nhưng chẳng liên quan gì tới tệp.
+- Gửi nguyên tệp rất tốn token. Base64 phình thêm 1/3 dung lượng và được tính như
+  chuỗi ký tự ngẫu nhiên. Một PDF 30 KB thành **40.904 ký tự base64**, trong khi
+  phần chữ của đúng tệp đó chỉ **334 ký tự** — chênh hơn 100 lần. Với PDF 300 KB
+  thì riêng tệp đã ngốn hơn 100.000 token, vượt cả mức *Token tối đa* mặc định,
+  và bị gửi lại ở **mọi lượt hỏi** sau đó vì nằm trong ngữ cảnh.
+
+> 📄 **PDF scan luôn được gửi nguyên tệp**, bất kể lựa chọn này — vì không có
+> chữ nào để rút. Còn Word, Excel, ZIP thì **không API nào** nhận nguyên tệp:
+> mô hình không tự giải nén được, nên chỉ có một đường là đọc chữ ra trước.
 
 Nút **🔍 Kiểm tra kết nối** gửi một câu hỏi thử ngay lập tức — **không cần lưu trước** —
 và báo lỗi bằng tiếng Việt dễ hiểu, ví dụ:

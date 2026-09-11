@@ -17,7 +17,9 @@ function settings_defaults()
         'maintenance_note'  => 'Hệ thống đang bảo trì, vui lòng quay lại sau ít phút nhé!',
         'max_upload_mb'     => '25',
         'max_files_per_msg' => '10',
-        'allowed_ext'       => 'jpg,jpeg,png,gif,webp,bmp,svg,pdf,txt,md,csv,json,xml,html,htm,css,js,ts,py,php,java,c,cpp,cs,go,rb,rs,sql,yml,yaml,ini,log,doc,docx,xls,xlsx,ppt,pptx,zip,rar,7z,mp3,wav,ogg,m4a,mp4,webm,mov',
+        // Lưu ý: các đuôi thi hành được (php, sh, exe…) luôn bị chặn ở api/upload.php
+        // dù có xuất hiện ở đây hay không.
+        'allowed_ext'       => 'jpg,jpeg,png,gif,webp,bmp,svg,heic,pdf,txt,md,markdown,csv,tsv,json,xml,html,htm,css,js,ts,java,c,h,cpp,cs,go,rb,rs,sql,yml,yaml,ini,conf,log,srt,vtt,doc,docx,xls,xlsx,ppt,pptx,odt,ods,odp,rtf,epub,zip,rar,7z,mp3,wav,ogg,m4a,flac,mp4,webm,mov',
         'history_limit'     => '20',
         'show_version'      => '1',
         'show_model_name'   => '1',

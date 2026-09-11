@@ -30,7 +30,7 @@ Tài liệu đầy đủ cho Tuấn Chatbot — xem [CHANGELOG](../CHANGELOG.md)
 **Hướng dẫn sử dụng**
 - [Cài đặt 5 bước](HUONG-DAN-SU-DUNG.md#2-cài-đặt)
 - [Trò chuyện với AI](HUONG-DAN-SU-DUNG.md#4-trò-chuyện-với-ai)
-- [Đính kèm tệp](HUONG-DAN-SU-DUNG.md#45-đính-kèm-tệp)
+- [Đính kèm tệp — các định dạng đọc được](HUONG-DAN-SU-DUNG.md#45-đính-kèm-tệp)
 - [Quản lý tài khoản](HUONG-DAN-SU-DUNG.md#5-quản-lý-tài-khoản)
 - [Cấu hình AI API Endpoint](HUONG-DAN-SU-DUNG.md#62-ai-api-endpoint)
 - [Câu hỏi thường gặp](HUONG-DAN-SU-DUNG.md#7-câu-hỏi-thường-gặp)
@@ -39,6 +39,7 @@ Tài liệu đầy đủ cho Tuấn Chatbot — xem [CHANGELOG](../CHANGELOG.md)
 - [Kiến trúc tổng thể](QUY-TRINH-KY-THUAT.md#1-kiến-trúc-tổng-thể)
 - [Luồng streaming SSE](QUY-TRINH-KY-THUAT.md#4-luồng-phản-hồi-theo-thời-gian-thực-sse)
 - [Bộ chuyển đổi AI API](QUY-TRINH-KY-THUAT.md#5-bộ-chuyển-đổi-ai-api)
+- [Đọc chữ trong PDF](QUY-TRINH-KY-THUAT.md#đọc-chữ-trong-pdf--includespdfphp)
 - [Lược đồ cơ sở dữ liệu](QUY-TRINH-KY-THUAT.md#6-cơ-sở-dữ-liệu)
 - [Lưu tệp theo khối](QUY-TRINH-KY-THUAT.md#7-lưu-trữ-tệp-trong-cơ-sở-dữ-liệu)
 - [Bảo mật](QUY-TRINH-KY-THUAT.md#10-bảo-mật)
@@ -48,6 +49,6 @@ Tài liệu đầy đủ cho Tuấn Chatbot — xem [CHANGELOG](../CHANGELOG.md)
 
 ## Về ảnh minh hoạ
 
-Toàn bộ ảnh trong `docs/images/` được chụp **tự động** từ ứng dụng thật đang chạy
+Toàn bộ 33 ảnh trong `docs/images/` được chụp **tự động** từ ứng dụng thật đang chạy
 (Chromium ở độ phân giải 2×, dữ liệu mẫu của một lớp học), sau đó thu nhỏ về 1440px
 và chuyển sang WebP. Không có ảnh nào được chỉnh sửa hay dựng lại bằng tay.

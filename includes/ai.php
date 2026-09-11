@@ -24,6 +24,23 @@ function ai_types()
     ];
 }
 
+/**
+ * Các cách gửi tệp PDF cho mô hình, kèm nhãn tiếng Việt.
+ *
+ * PDF là định dạng duy nhất có cả hai đường đi khả thi (gửi nguyên tệp hoặc gửi
+ * chữ đã rút), nên đây là lựa chọn duy nhất cần mở cho quản trị viên. Ảnh thì
+ * luôn phải gửi nguyên tệp, còn Word/Excel/ZIP thì không API nào nhận nguyên
+ * tệp — mô hình không tự giải nén được.
+ */
+function ai_pdf_modes()
+{
+    return [
+        'auto' => 'Tự chọn theo họ API (khuyến nghị)',
+        'file' => 'Luôn gửi nguyên tệp PDF (base64)',
+        'text' => 'Luôn gửi chữ đã rút ra',
+    ];
+}
+
 /** Gợi ý URL gốc cho từng loại API. */
 function ai_default_base_url($type)
 {
@@ -161,21 +178,59 @@ function ai_message_parts($message, $endpoint)
     $atts       = $message['attachments'] ?? [];
     $binaries   = [];   // phần nhị phân gắn kèm
     $textBlocks = [];
+    $failures   = [];   // tệp không chuyển tải được nội dung
 
     foreach ($atts as $att) {
-        $ext  = strtolower(pathinfo($att['original_name'], PATHINFO_EXTENSION));
-        $kind = $att['kind'];
-        $size = (int)$att['size'];
+        $ext       = strtolower(pathinfo($att['original_name'], PATHINFO_EXTENSION));
+        $kind      = $att['kind'];
+        $size      = (int)$att['size'];
+        $extracted = (string)($att['extracted_text'] ?? '');
+        $status    = (string)($att['extract_status'] ?? '');
 
         // Chỉ nhúng được khi kích thước còn trong ngưỡng an toàn về bộ nhớ.
         $inlineable = $size > 0 && $size <= ai_max_inline_bytes();
 
-        // Nội dung đọc từ cơ sở dữ liệu, chỉ nạp khi thật sự cần nhúng.
+        // Với PDF có ba con đường, xếp theo thứ tự đáng tin cậy:
+        //
+        //  - Anthropic và Gemini nhận thẳng tệp PDF qua khối document/inline_data
+        //    nên gửi nhị phân cho chất lượng tốt nhất (giữ bảng biểu, hình vẽ).
+        //  - Họ OpenAI thì khác: khối {"type":"file"} là phần mở rộng khá mới và
+        //    rất nhiều cổng trung gian tương thích OpenAI (OpenRouter, vLLM, các
+        //    gateway nội bộ) im lặng bỏ qua nó — mô hình không thấy tệp nào,
+        //    rồi tự nghĩ ra nội dung. Đã đọc được chữ thì gửi chữ: vừa chắc
+        //    chắn tới được mô hình, vừa nhẹ hơn base64 rất nhiều.
+        //  - Không đọc được chữ (PDF scan) thì vẫn phải gửi nhị phân và nhắc mô
+        //    hình nói thật nếu nó không xem được tệp.
+        //
+        // Thêm một chốt an toàn: PDF nặng mà đã đọc được chữ thì gửi chữ cho
+        // mọi họ API. Base64 phình thêm 1/3 dung lượng, tệp 10MB thành hơn 13MB
+        // trong một request JSON — nhiều nhà cung cấp trả về lỗi 413, trong khi
+        // phần chữ của cùng tệp đó thường chỉ vài chục KB.
+        //
+        // Quản trị viên có thể ghi đè bằng cột `pdf_mode` của endpoint:
+        //   auto — như mô tả trên (khuyến nghị)
+        //   file — luôn gửi nguyên tệp PDF, kể cả khi đã rút được chữ
+        //   text — luôn gửi chữ đã rút, chỉ gửi tệp khi không rút được chữ nào
+        $pdfMode  = (string)($endpoint['pdf_mode'] ?? 'auto');
+        $pdfHeavy = $size > 6 * 1024 * 1024;
+        if ($pdfMode === 'file') {
+            $pdfWantsBinary = true;
+        } elseif ($pdfMode === 'text') {
+            $pdfWantsBinary = $extracted === '';
+        } else {
+            $pdfWantsBinary = !($extracted !== '' && $pdfHeavy)
+                && (in_array($type, ['anthropic', 'gemini'], true)
+                    || ($type === 'openai' && $extracted === ''));
+        }
+        $pdfAsBinary = $kind === 'pdf' && $canFiles && $pdfWantsBinary
+            && in_array($type, ['openai', 'anthropic', 'gemini'], true);
+
         $wantsBinary = $inlineable && (
             ($kind === 'image' && $canVision)
-            || ($kind === 'pdf' && $canFiles && in_array($type, ['openai', 'anthropic', 'gemini'], true))
+            || $pdfAsBinary
             || (($kind === 'audio' || $kind === 'video') && $canFiles && $type === 'gemini')
         );
+        // Nội dung đọc từ cơ sở dữ liệu, chỉ nạp khi thật sự cần nhúng.
         $raw = $wantsBinary ? attachment_binary($att, ai_max_inline_bytes()) : null;
 
         if ($raw !== null && $raw !== '') {
@@ -193,6 +248,14 @@ function ai_message_parts($message, $endpoint)
                     'data' => base64_encode($raw),
                     'name' => $att['original_name'],
                 ];
+                if ($extracted === '') {
+                    // PDF scan: mô hình phải tự đọc ảnh trong tệp.
+                    $failures[] = [
+                        'name'   => $att['original_name'],
+                        'reason' => 'sent_as_file',
+                        'why'    => $status,
+                    ];
+                }
             } else {
                 $binaries[] = [
                     'kind' => 'media',
@@ -206,17 +269,31 @@ function ai_message_parts($message, $endpoint)
         }
 
         // Mọi trường hợp còn lại: đưa nội dung văn bản đã trích xuất vào prompt.
-        $extracted = (string)$att['extracted_text'];
         if ($extracted !== '') {
-            $textBlocks[] = "--- NỘI DUNG TỆP \"" . $att['original_name'] . "\" (" . fmt_bytes($size) . ") ---\n"
-                          . $extracted . "\n--- HẾT TỆP \"" . $att['original_name'] . "\" ---";
-        } else {
-            $textBlocks[] = '[Người dùng đã đính kèm tệp "' . $att['original_name'] . '" ('
-                          . fmt_bytes($size) . ', ' . ($att['mime'] ?: 'không rõ định dạng')
-                          . '). Hệ thống không đọc được nội dung tệp này.]';
+            $head = "--- NỘI DUNG TỆP \"" . $att['original_name'] . "\" (" . fmt_bytes($size) . ') ---';
+            $hint = ($status === 'legacy_office_partial' || $status === 'archive_listing')
+                ? "\n[Lưu ý: " . extract_reason_text($status, $kind) . ']'
+                : '';
+            $textBlocks[] = $head . $hint . "\n" . $extracted
+                          . "\n--- HẾT TỆP \"" . $att['original_name'] . "\" ---";
+            continue;
         }
+
+        // Không có chữ và cũng không gửi được tệp: phải nói thẳng, tuyệt đối
+        // không để mô hình đoán (đây chính là lỗi đã khiến người dùng nhận về
+        // một bài văn không liên quan gì tới tệp đã đính kèm).
+        $failures[] = [
+            'name'   => $att['original_name'],
+            'size'   => $size,
+            'mime'   => $att['mime'],
+            'kind'   => $kind,
+            'reason' => $status ?: 'unsupported',
+        ];
     }
 
+    if ($failures) {
+        $textBlocks[] = ai_unreadable_notice($failures, $endpoint);
+    }
     if ($textBlocks) {
         $text = trim($text . "\n\n" . implode("\n\n", $textBlocks));
     }
@@ -225,6 +302,50 @@ function ai_message_parts($message, $endpoint)
     }
 
     return ['text' => $text, 'binaries' => $binaries];
+}
+
+/**
+ * Ghi chú gửi kèm khi có tệp không chuyển tải được nội dung.
+ *
+ * Câu lệnh phải dứt khoát: mô hình được yêu cầu nói rõ là không đọc được tệp,
+ * chứ không được suy đoán nội dung rồi trả về một câu trả lời nghe có lý nhưng
+ * chẳng liên quan gì tới tệp người dùng gửi.
+ */
+function ai_unreadable_notice(array $failures, $endpoint)
+{
+    $sent    = [];   // tệp đã gửi nguyên bản, mô hình phải tự xem
+    $blocked = [];   // tệp không có cách nào tới được mô hình
+
+    foreach ($failures as $fail) {
+        if ($fail['reason'] === 'sent_as_file') {
+            $why = extract_reason_text((string)($fail['why'] ?? ''), 'pdf');
+            $sent[] = '- "' . $fail['name'] . '": ' . ($why !== '' ? $why . ' ' : '')
+                    . 'Tệp PDF được gửi kèm nguyên bản, hãy tự đọc chữ trong ảnh của tệp.';
+            continue;
+        }
+        $blocked[] = '- "' . $fail['name'] . '" (' . fmt_bytes((int)($fail['size'] ?? 0))
+                   . ', ' . (($fail['mime'] ?? '') ?: 'không rõ định dạng') . '): '
+                   . extract_reason_text($fail['reason'], $fail['kind'] ?? '');
+    }
+
+    $out = "[THÔNG BÁO HỆ THỐNG — KHÔNG PHẢI LỜI NGƯỜI DÙNG]";
+    if ($sent) {
+        $out .= "\nNgười dùng đính kèm tệp sau và bạn phải tự đọc nội dung trong tệp:\n"
+              . implode("\n", $sent);
+    }
+    if ($blocked) {
+        $out .= "\nNgười dùng có đính kèm tệp, nhưng nội dung sau KHÔNG tới được bạn:\n"
+              . implode("\n", $blocked);
+    }
+
+    $out .= "\n\nYÊU CẦU BẮT BUỘC: nếu bạn thực sự không đọc được nội dung các tệp trên, "
+          . "hãy nói thẳng với người dùng là chưa đọc được tệp và nêu lý do vừa liệt kê, "
+          . "kèm gợi ý xử lý (ví dụ: dán trực tiếp nội dung vào khung chat, lưu lại thành "
+          . ".docx hoặc .txt, hoặc dùng phần mềm nhận dạng chữ OCR với bản scan). "
+          . "TUYỆT ĐỐI KHÔNG suy đoán, không bịa, không tóm tắt nội dung mà bạn không nhìn thấy, "
+          . "và không dựa vào tên tệp để đoán nội dung.";
+
+    return $out;
 }
 
 /** Dựng mảng messages cho OpenAI & tương thích. */

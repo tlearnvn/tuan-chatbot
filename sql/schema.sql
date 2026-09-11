@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS `endpoints` (
   `supports_vision`  TINYINT(1)   NOT NULL DEFAULT 1,
   `supports_files`   TINYINT(1)   NOT NULL DEFAULT 1,
   `supports_stream`  TINYINT(1)   NOT NULL DEFAULT 1,
+  `pdf_mode`         ENUM('auto','file','text') NOT NULL DEFAULT 'auto'
+                     COMMENT 'auto = tự chọn theo họ API; file = luôn gửi nguyên tệp PDF; text = luôn gửi chữ đã rút',
   `history_limit`    INT UNSIGNED NOT NULL DEFAULT 20,
   `is_default`       TINYINT(1)   NOT NULL DEFAULT 0,
   `is_active`        TINYINT(1)   NOT NULL DEFAULT 1,
@@ -163,6 +165,8 @@ CREATE TABLE IF NOT EXISTS `attachments` (
   `size`            INT UNSIGNED NOT NULL DEFAULT 0,
   `kind`            VARCHAR(20)  NOT NULL DEFAULT 'file' COMMENT 'image | pdf | text | audio | video | file',
   `extracted_text`  LONGTEXT     NULL,
+  `extract_status`  VARCHAR(32)  NOT NULL DEFAULT ''
+                    COMMENT 'Rỗng = đọc được nội dung. Ngược lại là mã lý do, xem extract_reason_text()',
   `created_at`      DATETIME     NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_att_message` (`message_id`),

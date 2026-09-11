@@ -27,6 +27,7 @@ $defaults = [
     'supports_vision' => 1,
     'supports_files'  => 1,
     'supports_stream' => 1,
+    'pdf_mode'        => 'auto',
     'history_limit'   => 20,
     'is_default'      => 0,
     'is_active'       => 1,
@@ -67,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'supports_vision' => isset($_POST['supports_vision']) ? 1 : 0,
         'supports_files'  => isset($_POST['supports_files']) ? 1 : 0,
         'supports_stream' => isset($_POST['supports_stream']) ? 1 : 0,
+        'pdf_mode'        => (string)($_POST['pdf_mode'] ?? 'auto'),
         'history_limit'   => (int)($_POST['history_limit'] ?? 20),
         'is_default'      => isset($_POST['is_default']) ? 1 : 0,
         'is_active'       => isset($_POST['is_active']) ? 1 : 0,
@@ -75,6 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($form['name'] === '') {
         $errors[] = 'Vui lòng đặt tên cho endpoint.';
+    }
+    if (!array_key_exists($form['pdf_mode'], ai_pdf_modes())) {
+        $form['pdf_mode'] = 'auto';
     }
     if (!array_key_exists($form['api_type'], $types)) {
         $errors[] = 'Loại API không hợp lệ.';
@@ -295,6 +300,24 @@ admin_head(($isNew ? 'Thêm' : 'Sửa') . ' endpoint AI', 'endpoints');
             <span class="switch-track"></span><span>📎 Nhận tệp (PDF…)</span>
           </label>
         </div>
+      </div>
+      <div class="field field-wide">
+        <label for="pdf_mode">Cách gửi tệp PDF</label>
+        <select id="pdf_mode" name="pdf_mode">
+          <?php foreach (ai_pdf_modes() as $value => $label): ?>
+            <option value="<?= e($value) ?>" <?= $form['pdf_mode'] === $value ? 'selected' : '' ?>>
+              <?= e($label) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+        <span class="hint">
+          Chỉ có tác dụng khi đã bật <b>Nhận tệp</b>. Nên để <b>Tự chọn</b>: nhiều cổng
+          trung gian tương thích OpenAI âm thầm bỏ qua khối <code>{"type":"file"}</code>,
+          khiến mô hình không thấy tệp nào rồi tự nghĩ ra câu trả lời không liên quan.
+          Gửi nguyên tệp cũng rất tốn token — base64 của một PDF 30 KB dài 40.904 ký tự,
+          còn phần chữ của đúng tệp đó chỉ 334 ký tự. PDF scan luôn được gửi nguyên tệp
+          vì không có chữ nào để rút.
+        </span>
       </div>
     </div>
   </div>

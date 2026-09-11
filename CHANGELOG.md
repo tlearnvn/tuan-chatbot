@@ -6,6 +6,19 @@ Dự án tuân theo [Semantic Versioning](https://semver.org/lang/vi/): `MAJOR.M
 Số phiên bản được hiển thị ở chân trang mọi trang web và có thể tăng tự động
 trong **Quản trị → Phiên bản** hoặc bằng lệnh `php tools/bump.php patch "ghi chú"`.
 
+## [1.1.3] — 2026-09-11 · _Đọc Được Tệp_
+
+- Sửa lỗi tệp đính kèm PDF không tới được mô hình: viết lại bộ đọc PDF (includes/pdf.php) để tra bảng /ToUnicode của phông nhúng — nay đọc được tiếng Việt trong PDF in từ Chrome, Word, Google Docs, LaTeX, kể cả PDF 1.5 có luồng đối tượng /ObjStm.
+- Bộ đọc PDF cũ chỉ hiểu chuỗi literal nên trả về rỗng với hầu hết PDF hiện nay; mô hình không nhận được nội dung nào rồi tự nghĩ ra câu trả lời không liên quan.
+- Đọc thêm nội dung OpenDocument (odt, ods, odp), EPUB, RTF, Office 97-2003 (doc, xls, ppt), và liệt kê danh sách tệp bên trong tệp nén ZIP.
+- HTML nay được bỏ thẻ trước khi đưa vào ngữ cảnh nên đỡ tốn token.
+- Không bao giờ để mô hình đoán nội dung tệp nữa: khi nội dung không tới được mô hình, hệ thống gửi kèm thông báo nêu đúng lý do và cấm suy đoán theo tên tệp.
+- Giao diện báo ngay tình trạng từng tệp lúc tải lên: đã đọc được nội dung, gửi trực tiếp cho AI, hay chưa đọc được (kèm cách xử lý).
+- Thêm thiết lập Cách gửi tệp PDF cho từng endpoint: tự chọn, luôn gửi nguyên tệp base64, hoặc luôn gửi chữ đã rút.
+- PDF có chữ nay gửi dạng văn bản cho họ OpenAI vì nhiều cổng trung gian âm thầm bỏ qua khối type file; cách này vừa chắc tới được mô hình vừa nhẹ hơn base64 hơn 100 lần.
+- PDF trên 6MB đã rút được chữ thì gửi chữ để tránh lỗi HTTP 413 do base64 phình thêm 1/3 dung lượng.
+- Thêm công cụ tự kiểm tra php tools/selftest.php với 45 phép thử cho toàn bộ phần đọc nội dung tệp.
+
 ## [1.1.2] — 2026-09-11
 
 - Thêm thiết lập ẩn tên mô hình AI: khi tắt, tên mô hình (vd deepseek/deepseek-v4-pro) bị loại khỏi mọi dữ liệu gửi ra trình duyệt nên không đọc được qua mã nguồn trang; quản trị viên vẫn thấy và cơ sở dữ liệu vẫn lưu tên thật.
