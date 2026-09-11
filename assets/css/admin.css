@@ -172,6 +172,15 @@ code.inline-code {
 .t-msg .msg-avatar { width: 34px; height: 34px; font-size: 1rem; border-radius: 11px; }
 .t-body { max-width: min(720px, 82%); }
 .t-msg-user .t-body { margin-left: auto; }
+/* Câu trả lời đã bị "tạo lại": người dùng không thấy, quản trị viên vẫn xem được. */
+.t-msg.is-replaced { opacity: .72; }
+.t-msg.is-replaced .msg-bubble { border-style: dashed; }
+.replaced-note {
+  margin-bottom: .4rem; padding: .45rem .7rem; border-radius: var(--radius-sm, 10px);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--warn) 45%, var(--border));
+  font-size: .8rem; line-height: 1.5; color: var(--text-soft);
+}
 
 /* ---- Hộp chọn nhiều -------------------------------------------------------*/
 .check-list { display: grid; gap: .4rem; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }

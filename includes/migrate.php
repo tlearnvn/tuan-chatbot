@@ -7,7 +7,7 @@
  */
 
 /** Số hiệu lược đồ mà mã nguồn hiện tại yêu cầu. */
-define('DB_SCHEMA_VERSION', 3);
+define('DB_SCHEMA_VERSION', 4);
 
 /**
  * Các định dạng tài liệu mà bản 1.1.3 mới đọc được nội dung.
@@ -125,6 +125,19 @@ function db_migrate($force = false)
         if ($missing) {
             setting_set('allowed_ext', implode(',', array_merge($allowed, $missing)));
             $done[] = 'Cho phép tải lên thêm: ' . implode(', ', $missing) . '.';
+        }
+    }
+
+    // --- Lược đồ 4: giữ lại câu trả lời cũ khi người dùng bấm "tạo lại" ------
+    if (db_table_exists('messages')) {
+        $col = db_one("SHOW COLUMNS FROM `messages` LIKE 'status'");
+        if ($col && strpos((string)$col['Type'], 'replaced') === false) {
+            db()->exec(
+                "ALTER TABLE `messages`
+                   MODIFY `status` ENUM('ok','error','aborted','streaming','replaced')
+                   NOT NULL DEFAULT 'ok'"
+            );
+            $done[] = 'Thêm trạng thái `replaced` cho bảng `messages` để giữ lại câu trả lời cũ.';
         }
     }
 

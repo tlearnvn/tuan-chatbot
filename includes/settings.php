@@ -24,6 +24,9 @@ function settings_defaults()
         'show_version'      => '1',
         'show_model_name'   => '1',
         'github_url'        => 'https://github.com/tlearnvn/tuan-chatbot',
+        // 1 = người dùng tự xoá được lịch sử trò chuyện và tài khoản của mình.
+        // 0 = chỉ quản trị viên được xoá (dùng cho lớp học, cần giữ lại bài làm).
+        'allow_user_delete' => '1',
         'facebook_url'      => '',
         // Liên kết mạng xã hội hiện ở chân trang: github | facebook | both | none
         'social_link'       => 'github',
@@ -154,6 +157,29 @@ function allowed_extensions()
     $raw = strtolower((string)setting('allowed_ext'));
     $parts = array_filter(array_map('trim', explode(',', $raw)));
     return array_values(array_unique($parts));
+}
+
+/**
+ * Người dùng hiện tại có được tự xoá lịch sử trò chuyện không?
+ *
+ * Khi quản trị viên tắt `allow_user_delete`, mọi đường xoá của người dùng đều
+ * bị chặn ở phía máy chủ: xoá một cuộc trò chuyện, xoá toàn bộ lịch sử, và tự
+ * xoá tài khoản (vì xoá tài khoản kéo theo cả lịch sử qua khoá ngoại).
+ * Quản trị viên vẫn xoá được trong khu vực quản trị.
+ */
+function can_delete_history()
+{
+    if (setting_bool('allow_user_delete')) {
+        return true;
+    }
+    return function_exists('is_admin') && is_admin();
+}
+
+/** Câu giải thích khi người dùng không được phép xoá. */
+function delete_locked_message()
+{
+    return 'Quản trị viên đang giữ lại toàn bộ lịch sử trò chuyện nên bạn không thể '
+         . 'tự xoá. Nếu cần xoá, vui lòng liên hệ quản trị viên.';
 }
 
 /** Các kiểu liên kết mạng xã hội hiện ở chân trang, kèm nhãn tiếng Việt. */

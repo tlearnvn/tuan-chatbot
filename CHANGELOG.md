@@ -6,6 +6,14 @@ Dự án tuân theo [Semantic Versioning](https://semver.org/lang/vi/): `MAJOR.M
 Số phiên bản được hiển thị ở chân trang mọi trang web và có thể tăng tự động
 trong **Quản trị → Phiên bản** hoặc bằng lệnh `php tools/bump.php patch "ghi chú"`.
 
+## [1.1.6] — 2026-09-11
+
+- Thêm thiết lập Cho phép người dùng tự xoá lịch sử trò chuyện trong Quản trị → Cấu hình web. Tắt đi là giữ nguyên bài làm của học sinh.
+- Khi tắt, cả bốn đường xoá đều bị chặn ở phía máy chủ chứ không chỉ ẩn nút: xoá một cuộc trò chuyện, xoá toàn bộ lịch sử, tự xoá tài khoản, và nút tạo lại câu trả lời.
+- Chặn cả tự xoá tài khoản vì xoá tài khoản kéo theo toàn bộ cuộc trò chuyện và tệp đính kèm qua khoá ngoại.
+- Nút tạo lại câu trả lời vẫn dùng được nhưng câu trả lời cũ nay được giữ lại với trạng thái replaced: người dùng không thấy nữa, quản trị viên vẫn đọc đầy đủ trong Lịch sử chat kèm ghi chú.
+- Quản trị viên luôn xoá được trong khu vực quản trị, bất kể thiết lập này.
+
 ## [1.1.5] — 2026-09-11
 
 - Sửa lỗi nút ẩn thanh bên: khi ẩn, cột lưới co về 0 khiến thanh bên rộng 0px, mà translateX(-100%) của phần tử rộng 0px thì bằng 0 nên nó không trượt đi đâu — chữ bên trong bị ép xuống dòng từng từ, để lại một dải nham nhở đè lên khung chat.

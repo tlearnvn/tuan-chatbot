@@ -282,7 +282,10 @@
                 '<span class="conv-actions">' +
                   '<button type="button" class="conv-act" data-act="rename" title="Đổi tên">✏️</button>' +
                   '<button type="button" class="conv-act" data-act="pin" title="' + (conv.pinned ? 'Bỏ ghim' : 'Ghim') + '">📌</button>' +
-                  '<button type="button" class="conv-act danger" data-act="delete" title="Xoá">🗑️</button>' +
+                  // Quản trị viên có thể khoá quyền tự xoá lịch sử của người dùng.
+                  (CFG.canDelete
+                    ? '<button type="button" class="conv-act danger" data-act="delete" title="Xoá">🗑️</button>'
+                    : '') +
                 '</span>' +
               '</div>';
     });

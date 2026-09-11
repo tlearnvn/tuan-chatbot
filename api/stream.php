@@ -76,9 +76,17 @@ if (!$newConversation && $conv['title'] === 'Cuộc trò chuyện mới' && $con
 
 // --- Khi tạo lại câu trả lời: xoá câu trả lời cũ ở cuối ----------------------
 if ($regenerate) {
-    $last = db_one("SELECT * FROM `messages` WHERE `conversation_id` = ? ORDER BY `id` DESC LIMIT 1", [$conversation]);
+    $last = db_one("SELECT * FROM `messages` WHERE `conversation_id` = ? AND `status` <> 'replaced'
+                    ORDER BY `id` DESC LIMIT 1", [$conversation]);
     if ($last && $last['role'] === 'assistant') {
-        db_run('DELETE FROM `messages` WHERE `id` = ?', [$last['id']]);
+        if (can_delete_history()) {
+            db_run('DELETE FROM `messages` WHERE `id` = ?', [$last['id']]);
+        } else {
+            // Quản trị viên đang giữ lịch sử: câu trả lời cũ được đánh dấu
+            // `replaced` thay vì xoá — người dùng không thấy nữa nhưng quản trị
+            // viên vẫn đọc được đầy đủ trong Quản trị → Lịch sử chat.
+            db_run("UPDATE `messages` SET `status` = 'replaced' WHERE `id` = ?", [$last['id']]);
+        }
     }
 }
 
@@ -112,7 +120,8 @@ $historyLimit = max(2, min(200, $historyLimit));
 // LIMIT không dùng tham số ràng buộc được với prepared statement gốc của MySQL,
 // nên giá trị đã được ép kiểu số nguyên và giới hạn khoảng ở trên.
 $rows = db_all(
-    "SELECT * FROM `messages` WHERE `conversation_id` = ? AND `status` <> 'error'
+    "SELECT * FROM `messages` WHERE `conversation_id` = ?
+       AND `status` NOT IN ('error', 'replaced')
      ORDER BY `id` DESC LIMIT " . $historyLimit,
     [$conversation]
 );
@@ -288,9 +297,10 @@ if ($outFiles) {
 
 // Cập nhật thống kê cuộc trò chuyện.
 db_run(
-    'UPDATE `conversations` SET `updated_at` = ?, `endpoint_id` = ?,
-        `msg_count` = (SELECT COUNT(*) FROM `messages` WHERE `conversation_id` = ?)
-     WHERE `id` = ?',
+    "UPDATE `conversations` SET `updated_at` = ?, `endpoint_id` = ?,
+        `msg_count` = (SELECT COUNT(*) FROM `messages`
+                       WHERE `conversation_id` = ? AND `status` <> 'replaced')
+     WHERE `id` = ?",
     [now_vn(), (int)$endpoint['id'], $conversation, $conversation]
 );
 

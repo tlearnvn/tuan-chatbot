@@ -59,6 +59,7 @@ $bootstrapData = [
     'maxUploadMb'   => $maxUploadMb,
     'maxFiles'      => setting_int('max_files_per_msg', 10),
     'allowedExt'    => allowed_extensions(),
+    'canDelete'     => can_delete_history(),
     'brandEmoji'    => setting('brand_emoji'),
     'welcome'       => setting('welcome_message'),
     'siteName'      => site_name(),

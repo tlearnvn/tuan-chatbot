@@ -134,7 +134,8 @@ CREATE TABLE IF NOT EXISTS `messages` (
   `prompt_tokens`   INT UNSIGNED NOT NULL DEFAULT 0,
   `completion_tokens` INT UNSIGNED NOT NULL DEFAULT 0,
   `duration_ms`     INT UNSIGNED NOT NULL DEFAULT 0,
-  `status`          ENUM('ok','error','aborted','streaming') NOT NULL DEFAULT 'ok',
+  `status`          ENUM('ok','error','aborted','streaming','replaced') NOT NULL DEFAULT 'ok'
+                    COMMENT 'replaced = câu trả lời cũ giữ lại khi người dùng bấm tạo lại, chỉ quản trị viên thấy',
   `error_message`   TEXT         NULL,
   `created_at`      DATETIME     NOT NULL,
   PRIMARY KEY (`id`),

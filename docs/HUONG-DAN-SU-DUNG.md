@@ -312,7 +312,7 @@ Vào **👤 Tài khoản** (hoặc bấm vào tên bạn ở chân thanh bên).
 | **Thông tin cá nhân** | Chọn emoji đại diện, đổi họ tên, email, giao diện mặc định |
 | **Đổi mật khẩu** | Cần mật khẩu hiện tại. Sau khi đổi, **mọi thiết bị khác bị đăng xuất** |
 | **Hoạt động gần đây** | 12 hoạt động mới nhất kèm thời điểm |
-| **Vùng nguy hiểm** | Xoá toàn bộ lịch sử trò chuyện, hoặc xoá vĩnh viễn tài khoản |
+| **Vùng nguy hiểm** | Xoá toàn bộ lịch sử trò chuyện, hoặc xoá vĩnh viễn tài khoản — mục này **biến mất** nếu quản trị viên đang giữ lịch sử ([xem mục 6.7](#giữ-lại-lịch-sử-trò-chuyện-của-người-dùng)) |
 
 > Tên đăng nhập không đổi được. Quản trị viên duy nhất không thể tự xoá tài khoản
 > của mình — hệ thống luôn giữ lại ít nhất một quản trị viên.
@@ -467,7 +467,7 @@ Vì mọi dữ liệu nằm trong MySQL, đây là trang để theo dõi **dung 
 |---|---|
 | **Thương hiệu** | Tên website, emoji thương hiệu (làm luôn favicon), khẩu hiệu, **dòng bản quyền ở chân trang**, lời chào, 4 câu gợi ý |
 | **Màu sắc & giao diện** | Màu chính, màu nhấn, giao diện mặc định sáng/tối, hiện/ẩn số phiên bản, **hiện/ẩn tên mô hình AI**, **liên kết ở chân trang** |
-| **Truy cập** | Bật/tắt đăng ký, chế độ bảo trì kèm thông báo, email liên hệ |
+| **Truy cập** | Bật/tắt đăng ký, chế độ bảo trì kèm thông báo, **cho phép người dùng tự xoá lịch sử**, email liên hệ |
 | **Tệp & ngữ cảnh** | Dung lượng tối đa mỗi tệp, số tệp mỗi tin nhắn, số tin nhắn ngữ cảnh, danh sách định dạng được phép |
 
 **Liên kết ở chân trang** chọn biểu tượng hiện cạnh số phiên bản — biểu tượng và
@@ -490,6 +490,30 @@ và `max_allowed_packet` của MySQL.
 
 > Các định dạng có thể thực thi (`php`, `sh`, `exe`…) **luôn bị chặn**, dù bạn có
 > thêm vào danh sách cho phép. Ô nhập cũng từ chối lưu nếu bạn thử thêm chúng.
+
+#### Giữ lại lịch sử trò chuyện của người dùng
+
+Tắt **"Cho phép người dùng tự xoá lịch sử trò chuyện"** khi bạn cần giữ nguyên
+bài làm của học sinh. Khi tắt, mọi đường xoá của người dùng đều bị chặn **ở phía
+máy chủ** chứ không chỉ ẩn nút — gọi thẳng API cũng nhận HTTP 403:
+
+| Việc người dùng muốn làm | Khi bật (mặc định) | Khi tắt |
+|---|---|---|
+| Xoá một cuộc trò chuyện (nút 🗑️ ở thanh bên) | được | nút biến mất, API trả 403 |
+| Xoá toàn bộ lịch sử (Tài khoản → Vùng nguy hiểm) | được | mục bị ẩn, POST bị từ chối |
+| Tự xoá tài khoản | được | mục bị ẩn, POST bị từ chối |
+| Bấm 🔄 **Tạo lại câu trả lời** | câu trả lời cũ bị xoá hẳn | câu trả lời cũ **được giữ lại**, chỉ quản trị viên thấy |
+| Đổi tên ✏️, ghim 📌 cuộc trò chuyện | được | vẫn được |
+
+Vì sao chặn cả **tự xoá tài khoản**? Xoá tài khoản kéo theo toàn bộ cuộc trò
+chuyện, tin nhắn và tệp đính kèm của người đó, nên nếu để hở thì người dùng chỉ
+cần xoá tài khoản là mất sạch lịch sử.
+
+Khi ai đó bấm **🔄 Tạo lại câu trả lời**, câu trả lời cũ được đánh dấu là *đã
+thay thế*: người dùng không còn nhìn thấy, nhưng quản trị viên vẫn đọc được đầy
+đủ trong **Quản trị → Lịch sử chat**, kèm ghi chú giải thích.
+
+> Quản trị viên **luôn xoá được** trong khu vực quản trị, bất kể thiết lập này.
 
 #### Ẩn tên mô hình AI
 

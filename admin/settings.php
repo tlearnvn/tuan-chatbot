@@ -8,11 +8,12 @@ $fields = [
     'site_name', 'site_tagline', 'brand_emoji', 'copyright', 'welcome_message',
     'allow_register', 'maintenance', 'maintenance_note',
     'max_upload_mb', 'max_files_per_msg', 'allowed_ext', 'history_limit',
-    'show_version', 'show_model_name', 'social_link', 'github_url', 'facebook_url',
+    'show_version', 'show_model_name', 'allow_user_delete',
+    'social_link', 'github_url', 'facebook_url',
     'theme_primary', 'theme_accent', 'theme_mode',
     'suggestions', 'admin_email',
 ];
-$checkboxes = ['allow_register', 'maintenance', 'show_version', 'show_model_name'];
+$checkboxes = ['allow_register', 'maintenance', 'show_version', 'show_model_name', 'allow_user_delete'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_require();
@@ -232,7 +233,19 @@ admin_head('Cấu hình web', 'settings');
         <input type="checkbox" name="maintenance" value="1" <?= setting_bool('maintenance') ? 'checked' : '' ?>>
         <span class="switch-track"></span><span>Bật chế độ bảo trì (chỉ quản trị viên dùng được)</span>
       </label>
+      <label class="switch">
+        <input type="checkbox" name="allow_user_delete" value="1" <?= setting_bool('allow_user_delete') ? 'checked' : '' ?>>
+        <span class="switch-track"></span><span>Cho phép người dùng tự xoá lịch sử trò chuyện</span>
+      </label>
     </div>
+    <span class="hint">
+      <strong>Tắt mục cuối</strong> nếu bạn muốn giữ lại toàn bộ bài làm của học sinh.
+      Khi tắt, người dùng không còn xoá được cuộc trò chuyện, không xoá được toàn bộ
+      lịch sử, và cũng không tự xoá được tài khoản (vì xoá tài khoản là xoá luôn lịch sử).
+      Bấm <strong>🔄 Tạo lại câu trả lời</strong> vẫn dùng được, nhưng câu trả lời cũ
+      được giữ lại và chỉ quản trị viên nhìn thấy trong <em>Lịch sử chat</em>.
+      Quản trị viên vẫn xoá được bình thường.
+    </span>
     <div class="field mt-2">
       <label for="maintenance_note">Thông báo khi bảo trì</label>
       <input type="text" id="maintenance_note" name="maintenance_note" value="<?= e(setting('maintenance_note')) ?>">

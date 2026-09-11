@@ -89,6 +89,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ---- Xoá toàn bộ lịch sử trò chuyện ------------------------------------
     if ($action === 'clear_history') {
+        if (!can_delete_history()) {
+            flash('error', delete_locked_message());
+            redirect(base_url() . '/account.php');
+        }
         $convIds = db_all('SELECT `id` FROM `conversations` WHERE `user_id` = ?', [$user['id']]);
         foreach (db_all('SELECT * FROM `attachments` WHERE `user_id` = ?', [$user['id']]) as $att) {
             delete_attachment_file($att);
@@ -102,6 +106,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ---- Xoá tài khoản -----------------------------------------------------
     if ($action === 'delete_account') {
+        // Xoá tài khoản kéo theo cả lịch sử trò chuyện (khoá ngoại ON DELETE
+        // CASCADE), nên khi quản trị viên giữ lịch sử thì đây cũng là một
+        // đường xoá và phải chặn.
+        if (!can_delete_history()) {
+            flash('error', delete_locked_message());
+            redirect(base_url() . '/account.php');
+        }
         $password = (string)($_POST['password'] ?? '');
         if (!password_verify($password, $user['password_hash'])) {
             flash('error', 'Mật khẩu không đúng, chưa xoá tài khoản.');
@@ -281,6 +292,14 @@ layout_navbar('account');
     </div>
 
     <!-- Vùng nguy hiểm -->
+    <?php if (!can_delete_history()): ?>
+      <div class="card">
+        <h2 class="card-title">🔒 Lịch sử trò chuyện được giữ lại</h2>
+        <p class="text-muted mb-0">
+          <?= e(delete_locked_message()) ?>
+        </p>
+      </div>
+    <?php else: ?>
     <div class="card" style="border-color:color-mix(in srgb, var(--danger) 35%, transparent)">
       <h2 class="card-title">⚠️ Vùng nguy hiểm</h2>
 
@@ -320,6 +339,7 @@ layout_navbar('account');
         </form>
       </div>
     </div>
+    <?php endif; ?>
   </div>
 </div>
 

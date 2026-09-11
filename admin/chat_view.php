@@ -65,7 +65,8 @@ admin_head('Xem cuộc trò chuyện #' . $id, 'chats');
     <div class="transcript">
       <?php foreach ($messages as $msg): ?>
         <?php $isUser = $msg['role'] === 'user'; ?>
-        <div class="t-msg t-msg-<?= $isUser ? 'user' : 'assistant' ?>">
+        <?php $replaced = $msg['status'] === 'replaced'; ?>
+        <div class="t-msg t-msg-<?= $isUser ? 'user' : 'assistant' ?><?= $replaced ? ' is-replaced' : '' ?>">
           <div class="msg-avatar<?= $isUser ? '' : ' is-ai' ?>"
                style="<?= $isUser ? '' : 'background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff' ?>">
             <?= $isUser ? e($conv['avatar_emoji']) : e(setting('brand_emoji')) ?>
@@ -102,6 +103,12 @@ admin_head('Xem cuộc trò chuyện #' . $id, 'chats');
               </details>
             <?php endif; ?>
 
+            <?php if ($replaced): ?>
+              <div class="replaced-note">
+                🔄 Câu trả lời này đã bị người dùng bấm <strong>tạo lại</strong>.
+                Người dùng không còn thấy nó, hệ thống giữ lại để quản trị viên đối chiếu.
+              </div>
+            <?php endif; ?>
             <div class="msg-bubble<?= $msg['status'] === 'error' ? ' is-error' : '' ?>"
                  style="<?= $isUser ? 'background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border-color:transparent' : '' ?>">
               <?php if ($isUser): ?>

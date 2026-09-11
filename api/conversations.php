@@ -52,7 +52,10 @@ switch ($action) {
     // ---- Xem toàn bộ tin nhắn của một cuộc trò chuyện -----------------------
     case 'get':
         $conv = api_conversation((int)api_param('id', 0), $user);
-        $rows = db_all('SELECT * FROM `messages` WHERE `conversation_id` = ? ORDER BY `id` ASC', [$conv['id']]);
+        // Bỏ qua câu trả lời đã bị thay thế bằng nút "tạo lại" — chỉ quản trị
+        // viên mới xem được chúng trong Quản trị → Lịch sử chat.
+        $rows = db_all("SELECT * FROM `messages` WHERE `conversation_id` = ?
+                          AND `status` <> 'replaced' ORDER BY `id` ASC", [$conv['id']]);
 
         $ids = array_map(function ($r) { return (int)$r['id']; }, $rows);
         $attMap = api_attachments_for_messages($ids);
@@ -112,6 +115,10 @@ switch ($action) {
 
     // ---- Xoá ------------------------------------------------------------------
     case 'delete':
+        // Chặn ở máy chủ, không chỉ ẩn nút: người dùng vẫn gọi thẳng API được.
+        if (!can_delete_history()) {
+            json_error(delete_locked_message(), 403);
+        }
         $conv = api_conversation((int)api_param('id', 0), $user);
         foreach (db_all('SELECT * FROM `attachments` WHERE `conversation_id` = ?', [$conv['id']]) as $att) {
             delete_attachment_file($att);
