@@ -1,0 +1,20 @@
+# Cấu hình thật (chứa mật khẩu CSDL và khoá mã hoá)
+/config/config.php
+
+# Tệp người dùng tải lên
+/uploads/*
+!/uploads/.htaccess
+!/uploads/index.html
+!/uploads/.gitkeep
+
+# Bản đóng gói phát hành
+/dist/
+*.zip
+
+# Rác của hệ điều hành / IDE
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+*.swp

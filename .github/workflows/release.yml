@@ -1,0 +1,143 @@
+name: Đóng gói & phát hành
+
+# Khi đẩy tag dạng v1.2.3 lên, workflow này sẽ:
+#   1. Kiểm tra cú pháp toàn bộ file PHP
+#   2. Kiểm tra tag khớp với APP_VERSION trong includes/version.php
+#   3. Đóng gói ZIP sẵn sàng tải lên shared hosting
+#   4. Tạo GitHub Release với ghi chú lấy từ CHANGELOG.md
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Phiên bản cần đóng gói (để trống = lấy từ includes/version.php)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Đóng gói và tạo Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Cài đặt PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: zip, mbstring, curl, pdo_mysql, openssl, fileinfo
+          coverage: none
+
+      - name: Kiểm tra cú pháp PHP
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r -d '' file; do
+            if ! php -l "$file" > /dev/null; then
+              echo "::error file=$file::Lỗi cú pháp PHP"
+              php -l "$file" || true
+              fail=1
+            fi
+          done < <(find . -name '*.php' -not -path './.git/*' -print0)
+          if [ "$fail" -ne 0 ]; then
+            echo "Có file PHP bị lỗi cú pháp."
+            exit 1
+          fi
+          echo "✅ Toàn bộ file PHP đúng cú pháp."
+
+      - name: Đọc phiên bản ứng dụng
+        id: version
+        run: |
+          APP_VERSION=$(php -r "require 'includes/version.php'; echo APP_VERSION;")
+          CODENAME=$(php -r "require 'includes/version.php'; echo APP_CODENAME;")
+          echo "app_version=$APP_VERSION" >> "$GITHUB_OUTPUT"
+          echo "codename=$CODENAME" >> "$GITHUB_OUTPUT"
+          echo "Phiên bản trong mã nguồn: $APP_VERSION ($CODENAME)"
+
+      - name: Đối chiếu tag với phiên bản trong mã nguồn
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          APP_VERSION="${{ steps.version.outputs.app_version }}"
+          if [ "$TAG_VERSION" != "$APP_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME không khớp APP_VERSION ($APP_VERSION) trong includes/version.php."
+            echo "Hãy chạy: php tools/bump.php <patch|minor|major> trước khi tạo tag."
+            exit 1
+          fi
+          echo "✅ Tag khớp với phiên bản trong mã nguồn."
+
+      - name: Đóng gói ZIP
+        run: |
+          php tools/build_zip.php
+          ls -lh dist/
+
+      - name: Trích ghi chú phát hành từ CHANGELOG.md
+        id: notes
+        run: |
+          APP_VERSION="${{ steps.version.outputs.app_version }}"
+          php -r '
+            $version = $argv[1];
+            $lines = file("CHANGELOG.md", FILE_IGNORE_NEW_LINES);
+            $out = [];
+            $inside = false;
+            foreach ($lines as $line) {
+                if (preg_match("/^##\s*\[?" . preg_quote($version, "/") . "\]?/", $line)) {
+                    $inside = true;
+                    continue;
+                }
+                if ($inside && preg_match("/^##\s/", $line)) {
+                    break;
+                }
+                if ($inside) {
+                    $out[] = $line;
+                }
+            }
+            $body = trim(implode("\n", $out));
+            if ($body === "") {
+                $body = "Xem chi tiết trong CHANGELOG.md.";
+            }
+            file_put_contents("RELEASE_NOTES.md", $body . "\n");
+          ' "$APP_VERSION"
+          echo "--- Ghi chú phát hành ---"
+          cat RELEASE_NOTES.md
+
+      - name: Bổ sung hướng dẫn cài đặt vào ghi chú
+        run: |
+          cat >> RELEASE_NOTES.md <<'EOF'
+
+---
+
+### 📦 Cài đặt lên shared hosting
+
+1. Tải file ZIP bên dưới và giải nén toàn bộ vào `public_html/`.
+2. Cấp quyền ghi cho `uploads/` và `config/` (755).
+3. Mở `https://ten-mien-cua-ban/install.php` và làm theo 5 bước.
+4. **Xoá `install.php`** sau khi cài xong.
+
+Chi tiết xem `DOC-CAI-DAT.txt` trong gói hoặc [README](../../blob/main/README.md).
+EOF
+
+      - name: Tạo GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "v${{ steps.version.outputs.app_version }} — ${{ steps.version.outputs.codename }}"
+          body_path: RELEASE_NOTES.md
+          files: dist/*.zip
+          draft: false
+          prerelease: false
+
+      - name: Lưu gói khi chạy thủ công
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tuan-chatbot-${{ steps.version.outputs.app_version }}
+          path: dist/*.zip
+          retention-days: 14
