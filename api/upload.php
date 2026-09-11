@@ -76,21 +76,8 @@ for ($i = 0; $i < $count; $i++) {
         continue;
     }
 
-    try {
-        list($month, $dir) = upload_ensure_dir();
-    } catch (Exception $ex) {
-        json_error('Không tạo được thư mục lưu tệp trên máy chủ. Hãy cấp quyền ghi cho thư mục uploads/.', 500);
-    }
-
-    $mime   = detect_mime($tmpName, mime_from_ext($ext));
-    $kind   = file_kind($mime, $ext);
-    $stored = $month . '/' . date('Ymd-His') . '-' . bin2hex(random_bytes(6)) . '.' . preg_replace('/[^a-z0-9]/', '', $ext);
-
-    if (!@move_uploaded_file($tmpName, upload_path($stored))) {
-        $errors[] = $name . ': Không lưu được tệp lên máy chủ.';
-        continue;
-    }
-    @chmod(upload_path($stored), 0644);
+    $mime = detect_mime($tmpName, mime_from_ext($ext));
+    $kind = file_kind($mime, $ext);
 
     // SVG có thể chứa script — xử lý như tệp văn bản thuần để tránh XSS khi xem lại.
     if ($ext === 'svg') {
@@ -98,26 +85,44 @@ for ($i = 0; $i < $count; $i++) {
         $kind = 'text';
     }
 
+    // Trích xuất văn bản ngay từ tệp tạm của PHP, trước khi tệp tạm bị xoá.
     $extracted = '';
     try {
-        $extracted = extract_text_from_file(upload_path($stored), $kind, $ext);
+        $extracted = extract_text_from_file($tmpName, $kind, $ext);
     } catch (Exception $ex) {
         $extracted = '';
     }
 
+    // Tạo bản ghi trước để có id, rồi ghi nội dung theo từng khối vào CSDL.
     $id = db_insert('attachments', [
         'user_id'         => (int)$user['id'],
         'conversation_id' => null,
         'message_id'      => null,
         'direction'       => 'in',
         'original_name'   => $safeName,
-        'stored_name'     => $stored,
+        'storage'         => 'db',
+        'stored_name'     => '',
         'mime'            => mb_substr($mime, 0, 160),
         'size'            => $size,
         'kind'            => $kind,
         'extracted_text'  => $extracted !== '' ? $extracted : null,
         'created_at'      => now_vn(),
     ]);
+
+    try {
+        $written = storage_put_from_file($id, $tmpName);
+        if ($written !== $size) {
+            db_run('UPDATE `attachments` SET `size` = ? WHERE `id` = ?', [$written, $id]);
+            $size = $written;
+        }
+    } catch (Exception $ex) {
+        db_run('DELETE FROM `attachments` WHERE `id` = ?', [$id]);
+        $detail = stripos($ex->getMessage(), 'max_allowed_packet') !== false
+            ? ' Hãy nhờ nhà cung cấp hosting tăng max_allowed_packet của MySQL.'
+            : '';
+        $errors[] = $name . ': Không lưu được nội dung tệp vào cơ sở dữ liệu.' . $detail;
+        continue;
+    }
 
     $results[] = [
         'id'            => $id,

@@ -15,13 +15,12 @@ if (!$att) {
     exit('Không tìm thấy tệp.');
 }
 
-$path = attachment_abs_path($att);
-if (!$path || !is_file($path)) {
+if (!attachment_available($att)) {
     http_response_code(404);
-    exit('Tệp không còn tồn tại trên máy chủ.');
+    exit('Nội dung tệp không còn tồn tại.');
 }
 
-$size = filesize($path);
+$size = attachment_size($att);
 $mime = $att['mime'] ?: 'application/octet-stream';
 
 // Chỉ hiển thị trực tiếp các định dạng an toàn; còn lại buộc tải xuống.
@@ -38,6 +37,11 @@ $fileName = $att['original_name'];
 $asciiName = preg_replace('/[^\x20-\x7E]/', '_', $fileName);
 $asciiName = str_replace(['"', '\\'], '_', $asciiName);
 
+// Phiên không còn cần tới nữa — đóng sớm để không giữ khoá trong lúc gửi tệp lớn.
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
+
 while (ob_get_level() > 0) {
     ob_end_clean();
 }
@@ -52,9 +56,6 @@ header('Content-Security-Policy: default-src \'none\'; img-src \'self\' data:; m
 header('Cache-Control: private, max-age=86400');
 header('Accept-Ranges: none');
 
-$fp = fopen($path, 'rb');
-if ($fp) {
-    fpassthru($fp);
-    fclose($fp);
-}
+// Nội dung được đọc từ cơ sở dữ liệu theo từng khối nên bộ nhớ PHP luôn ở mức thấp.
+attachment_passthru($att);
 exit;

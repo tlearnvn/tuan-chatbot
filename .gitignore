@@ -1,11 +1,9 @@
 # Cấu hình thật (chứa mật khẩu CSDL và khoá mã hoá)
 /config/config.php
 
-# Tệp người dùng tải lên
-/uploads/*
-!/uploads/.htaccess
-!/uploads/index.html
-!/uploads/.gitkeep
+# Thư mục tệp cũ (nếu nâng cấp từ bản trước 1.1.0).
+# Bản mới lưu tệp trong cơ sở dữ liệu nên không sinh thư mục này.
+/uploads/
 
 # Bản đóng gói phát hành
 /dist/

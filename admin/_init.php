@@ -5,8 +5,12 @@
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/includes/layout.php';
 require_once dirname(__DIR__) . '/includes/ai.php';
+require_once dirname(__DIR__) . '/includes/migrate.php';
 
 $adminUser = require_admin();
+
+// Tự nâng cấp lược đồ khi cần. Chỉ so một giá trị đã nạp sẵn nên gần như không tốn gì.
+db_migrate();
 
 /** Các mục trong menu quản trị. */
 function admin_menu()
@@ -17,6 +21,7 @@ function admin_menu()
         'documents' => ['📚', 'Tài liệu đi kèm', 'documents.php'],
         'chats'     => ['💬', 'Lịch sử chat',    'chats.php'],
         'users'     => ['👥', 'Người dùng',      'users.php'],
+        'storage'   => ['📦', 'Dung lượng',      'storage.php'],
         'settings'  => ['⚙️', 'Cấu hình web',    'settings.php'],
         'logs'      => ['📜', 'Nhật ký',         'logs.php'],
         'version'   => ['🏷️', 'Phiên bản',       'version.php'],

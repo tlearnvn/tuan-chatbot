@@ -144,6 +144,10 @@ CREATE TABLE IF NOT EXISTS `messages` (
 
 -- -----------------------------------------------------------------------------
 -- Tệp đính kèm (cả tệp người dùng gửi lên lẫn tệp AI trả về)
+--
+-- Chỉ lưu phần thông tin (metadata) ở bảng này để mọi truy vấn liệt kê đều nhẹ.
+-- Nội dung nhị phân nằm ở bảng `attachment_chunks` bên dưới — không ghi file
+-- nào xuống đĩa, nhờ vậy không tốn inode của hosting.
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `attachments` (
   `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -152,7 +156,9 @@ CREATE TABLE IF NOT EXISTS `attachments` (
   `message_id`      INT UNSIGNED NULL,
   `direction`       ENUM('in','out') NOT NULL DEFAULT 'in',
   `original_name`   VARCHAR(255) NOT NULL,
-  `stored_name`     VARCHAR(255) NOT NULL,
+  `storage`         ENUM('db','file') NOT NULL DEFAULT 'db'
+                    COMMENT 'db = nội dung trong attachment_chunks; file = bản cũ nằm trong uploads/',
+  `stored_name`     VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'Chỉ dùng cho bản ghi cũ storage = file',
   `mime`            VARCHAR(160) NOT NULL DEFAULT 'application/octet-stream',
   `size`            INT UNSIGNED NOT NULL DEFAULT 0,
   `kind`            VARCHAR(20)  NOT NULL DEFAULT 'file' COMMENT 'image | pdf | text | audio | video | file',
@@ -163,6 +169,37 @@ CREATE TABLE IF NOT EXISTS `attachments` (
   KEY `idx_att_user` (`user_id`, `created_at`),
   KEY `idx_att_conv` (`conversation_id`),
   CONSTRAINT `fk_att_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+-- Nội dung nhị phân của tệp, cắt thành nhiều khối nhỏ
+--
+-- Cắt khối để không phụ thuộc vào `max_allowed_packet` của MySQL (nhiều hosting
+-- chỉ cho 4–16MB) và để đọc/ghi tệp lớn mà không ngốn bộ nhớ PHP.
+-- Kích thước khối do storage_chunk_size() tự tính theo cấu hình máy chủ.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `attachment_chunks` (
+  `attachment_id` INT UNSIGNED   NOT NULL,
+  `seq`           SMALLINT UNSIGNED NOT NULL COMMENT 'Thứ tự khối, bắt đầu từ 0',
+  `content`       MEDIUMBLOB     NOT NULL,
+  PRIMARY KEY (`attachment_id`, `seq`),
+  CONSTRAINT `fk_chunk_attachment` FOREIGN KEY (`attachment_id`)
+    REFERENCES `attachments` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+-- Phiên đăng nhập (thay cho file session trên đĩa)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `sessions` (
+  `id`            VARCHAR(128) NOT NULL,
+  `user_id`       INT UNSIGNED NULL,
+  `ip`            VARCHAR(45)  NOT NULL DEFAULT '',
+  `user_agent`    VARCHAR(255) NOT NULL DEFAULT '',
+  `payload`       MEDIUMBLOB   NULL,
+  `last_activity` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Unix timestamp, dùng để dọn phiên hết hạn',
+  PRIMARY KEY (`id`),
+  KEY `idx_sessions_activity` (`last_activity`),
+  KEY `idx_sessions_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------

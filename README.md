@@ -3,6 +3,10 @@
 Chatbot AI viết bằng **PHP + HTML + CSS thuần** (không cần Composer, không cần Node.js),
 giao diện tiếng Việt tươi vui, chạy được ngay trên **shared hosting** chỉ bằng cách giải nén và cài đặt.
 
+> **Toàn bộ dữ liệu nằm trong MySQL** — tệp đính kèm, ảnh AI sinh ra và cả phiên đăng nhập.
+> Ứng dụng không ghi tệp nào xuống đĩa (ngoài `config/config.php` lúc cài đặt), nên **số inode
+> luôn cố định ở khoảng 55 tệp mã nguồn** dù có bao nhiêu người dùng hay bao nhiêu tệp tải lên.
+
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-777bb4) ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-4479a1) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -20,6 +24,7 @@ giao diện tiếng Việt tươi vui, chạy được ngay trên **shared hosti
 
 ### Tệp
 - Tải lên **mọi loại tệp**: ảnh, PDF, Word/Excel/PowerPoint, văn bản, mã nguồn, âm thanh, video, nén.
+- **Lưu trong cơ sở dữ liệu**, cắt thành nhiều khối nhỏ (tự chọn theo `max_allowed_packet`) nên vừa không tốn inode, vừa đọc/ghi tệp lớn mà bộ nhớ PHP chỉ giữ đúng một khối.
 - Kéo–thả vào ô soạn tin, dán ảnh trực tiếp từ clipboard, hiển thị tiến trình tải lên.
 - Tự **trích xuất văn bản** từ txt/md/csv/json/code, docx/xlsx/pptx (đọc XML trong ZIP) và PDF (giải nén stream) để đưa vào ngữ cảnh.
 - Ảnh và PDF được gửi trực tiếp cho mô hình dưới dạng base64 nếu endpoint hỗ trợ.
@@ -53,6 +58,12 @@ Mỗi endpoint cấu hình được: **URL**, **API key** (mã hoá AES-256-CBC 
 **system prompt**, **tài liệu đi kèm**, số tin nhắn ngữ cảnh, header HTTP bổ sung và payload bổ sung (JSON).
 Có nút **Kiểm tra kết nối** báo lỗi bằng tiếng Việt dễ hiểu, chạy được ngay cả khi chưa lưu.
 
+### Dung lượng & phiên (Quản trị → Dung lượng)
+- Xem dung lượng database đang bị chiếm bởi tệp đính kèm, nội dung chat, tài liệu — chia theo loại tệp và theo người dùng.
+- Danh sách **phiên đăng nhập** đang hoạt động kèm IP, thiết bị; ngắt từng phiên hoặc dọn phiên hết hạn.
+- Xoá tệp lớn không cần thiết, dọn dữ liệu mồ côi.
+- Nếu nâng cấp từ bản cũ: nút **chuyển tệp từ `uploads/` vào database** theo từng lô, sau đó xoá hẳn thư mục đó.
+
 ### Khác
 - Toàn bộ thời gian theo **giờ Việt Nam (UTC+7)** — cả PHP lẫn `time_zone` của MySQL.
 - **Lịch sử phiên bản**: số phiên bản hiện ở chân trang, trang `/changelog.php` công khai, tăng phiên bản ngay trong trang quản trị hoặc bằng CLI, GitHub Action tự tạo Release theo tag.
@@ -64,8 +75,9 @@ Có nút **Kiểm tra kết nối** báo lỗi bằng tiếng Việt dễ hiểu
 
 1. **Tạo database MySQL** trong cPanel/DirectAdmin (bộ mã `utf8mb4`), ghi lại tên DB, user, mật khẩu.
 2. **Giải nén** file `tuan-chatbot-x.y.z.zip` vào `public_html/` (hoặc thư mục con nếu muốn).
-3. Cấp quyền ghi: `uploads/` và `config/` → **755**, `CHANGELOG.md` và `includes/version.php` → **664**
-   (chỉ cần nếu muốn dùng chức năng tăng phiên bản trong trang quản trị).
+3. Cấp quyền ghi: `config/` → **755**. Muốn dùng chức năng tăng phiên bản trong trang quản trị
+   thì thêm `CHANGELOG.md` và `includes/version.php` → **664**.
+   Không cần thư mục nào khác ghi được — tệp đính kèm nằm trong database.
 4. Mở `https://ten-mien-cua-ban/install.php` và làm theo 5 bước của trình cài đặt.
 5. **Xoá `install.php`** sau khi cài xong.
 6. Vào **Quản trị → AI API Endpoint** để thêm/sửa kết nối AI.
@@ -96,7 +108,7 @@ Có nút **Kiểm tra kết nối** báo lỗi bằng tiếng Việt dễ hiểu
 │   ├── endpoints.php  endpoint_edit.php  endpoint_test.php
 │   ├── documents.php      # Tài liệu đi kèm
 │   ├── chats.php  chat_view.php
-│   ├── users.php  settings.php  logs.php  version.php
+│   ├── users.php  storage.php  settings.php  logs.php  version.php
 ├── api/                   # Điểm cuối AJAX / SSE
 │   ├── stream.php         # Phát luồng phản hồi AI
 │   ├── conversations.php  upload.php  download.php
@@ -105,15 +117,19 @@ Có nút **Kiểm tra kết nối** báo lỗi bằng tiếng Việt dễ hiểu
 │   ├── ai.php             # Bộ chuyển đổi 4 họ AI API
 │   ├── db.php  auth.php  settings.php  files.php
 │   ├── crypto.php         # Mã hoá API key
+│   ├── storage.php        # Lưu nội dung tệp trong CSDL (cắt khối)
+│   ├── session_db.php     # Session lưu trong CSDL
+│   ├── migrate.php        # Nâng cấp lược đồ + chuyển tệp cũ vào CSDL
 │   ├── versioning.php     # Đọc/ghi CHANGELOG + version
 │   └── layout.php  helpers.php  version.php
 ├── assets/css/            # app.css, admin.css
 ├── assets/js/             # app.js, chat.js
 ├── config/config.sample.php
 ├── sql/schema.sql
-├── tools/bump.php  tools/build_zip.php
-└── uploads/               # Tệp người dùng (đã chặn thực thi)
+└── tools/bump.php  tools/build_zip.php
 ```
+
+Không có thư mục `uploads/` — nội dung tệp nằm ở bảng `attachment_chunks`.
 
 ---
 
@@ -160,8 +176,9 @@ nên giải nén trực tiếp lên hosting là chạy được.
 - CSRF token cho mọi biểu mẫu và mọi lệnh gọi API ghi dữ liệu.
 - Toàn bộ truy vấn dùng **prepared statement** của PDO.
 - API key mã hoá **AES-256-CBC + HMAC-SHA256** bằng `app_key` trong `config/config.php`.
-- `uploads/` bị chặn truy cập trực tiếp và tắt thực thi PHP; tệp chỉ ra ngoài qua `api/download.php`
-  sau khi kiểm tra quyền sở hữu, kèm `Content-Disposition: attachment` và `nosniff` cho định dạng không an toàn.
+- Tệp nằm trong database nên **không tồn tại URL trực tiếp** tới tệp: mọi tệp chỉ ra ngoài qua
+  `api/download.php` sau khi kiểm tra quyền sở hữu, kèm `Content-Disposition: attachment`,
+  `nosniff` và CSP `sandbox` cho định dạng không an toàn. Không có tệp nào trên đĩa để bị thực thi.
 - Chặn tuyệt đối các phần mở rộng thực thi (`php`, `phtml`, `sh`, `exe`…) dù cấu hình có mở rộng thế nào.
 - Nội dung AI trả về được lọc bằng **DOMPurify** trước khi chèn vào DOM.
 - `config/`, `includes/`, `sql/`, `tools/`, `data/` bị chặn truy cập từ web.
@@ -178,6 +195,9 @@ nên giải nén trực tiếp lên hosting là chạy được.
 | `Hết thời gian chờ sau 300 giây` | Tăng **Timeout** của endpoint và `max_execution_time` của PHP. |
 | `Không kết nối được tới máy chủ AI` | Hosting chặn outbound — nhờ nhà cung cấp mở cURL. |
 | Tải tệp lớn báo lỗi | Tăng `upload_max_filesize` và `post_max_size` (xem gợi ý trong *Cấu hình web*). |
+| `Không lưu được nội dung tệp vào cơ sở dữ liệu` | `max_allowed_packet` của MySQL quá nhỏ. Hệ thống tự cắt khối theo giá trị này, nhưng nếu dưới 1MB hãy nhờ hosting tăng lên. |
+| Database gần hết quota | Quản trị → **Dung lượng**: xem tệp lớn nhất, xoá bớt; hoặc giảm *Dung lượng tối đa mỗi tệp* trong Cấu hình web. |
+| Hay bị đăng xuất | Bảng `sessions` bị dọn quá sớm. Tăng `session.gc_maxlifetime` của PHP. |
 | Lỗi 413 khi gửi ảnh | Ảnh base64 làm payload phồng lên; giảm kích thước ảnh hoặc số tin nhắn ngữ cảnh. |
 | PDF không đọc được nội dung | PDF dạng ảnh scan không rút được text — hãy bật "Nhận tệp" để gửi PDF trực tiếp cho mô hình. |
 | Không ghi được phiên bản | Đặt quyền 664 cho `includes/version.php` và `CHANGELOG.md`. |

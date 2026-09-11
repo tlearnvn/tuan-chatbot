@@ -78,13 +78,6 @@ function should_skip($relative, array $excludeDirs, array $excludeFiles, array $
     if ($ext !== '' && in_array($ext, $excludeExt, true)) {
         return true;
     }
-    // Tệp người dùng đã tải lên: chỉ giữ .htaccess, index.html và .gitkeep.
-    if (strpos($relative, 'uploads/') === 0) {
-        $name = end($parts);
-        if (!in_array($name, ['.htaccess', 'index.html', '.gitkeep'], true)) {
-            return true;
-        }
-    }
     return false;
 }
 
@@ -166,7 +159,6 @@ function build_install_guide()
         . "  Giải nén toàn bộ nội dung gói này vào thư mục public_html/\r\n"
         . "  (hoặc thư mục con nếu muốn đặt ở đường dẫn phụ).\r\n\r\n"
         . "BƯỚC 3 — CẤP QUYỀN THƯ MỤC\r\n"
-        . "  uploads/               -> 755 (phải ghi được)\r\n"
         . "  config/                -> 755 (phải ghi được)\r\n"
         . "  includes/version.php   -> 664 (nếu muốn tăng phiên bản từ trang quản trị)\r\n"
         . "  CHANGELOG.md           -> 664 (nếu muốn tăng phiên bản từ trang quản trị)\r\n\r\n"
@@ -177,7 +169,13 @@ function build_install_guide()
         . "BƯỚC 5 — BẢO MẬT\r\n"
         . "  * XOÁ file install.php sau khi cài xong.\r\n"
         . "  * Bật HTTPS cho tên miền (Let's Encrypt miễn phí).\r\n"
-        . "  * Kiểm tra uploads/.htaccess vẫn còn nguyên.\r\n\r\n"
+        . "  * Kiểm tra config/.htaccess vẫn còn nguyên.\r\n\r\n"
+        . "LƯU Ý VỀ INODE\r\n"
+        . "  Toàn bộ tệp đính kèm và phiên đăng nhập được lưu trong cơ sở dữ liệu,\r\n"
+        . "  ứng dụng KHÔNG ghi tệp nào xuống đĩa. Nhờ vậy số inode luôn cố định\r\n"
+        . "  (chỉ khoảng 55 tệp mã nguồn) dù có bao nhiêu người dùng.\r\n"
+        . "  Bù lại, tệp đính kèm sẽ chiếm dung lượng DATABASE — hãy theo dõi ở\r\n"
+        . "  Quản trị > Cấu hình web > Thông tin hệ thống.\r\n\r\n"
         . "YÊU CẦU MÁY CHỦ\r\n"
         . "  PHP 7.4 trở lên, MySQL 5.7+ / MariaDB 10.2+\r\n"
         . "  Phần mở rộng bắt buộc: pdo_mysql, curl, mbstring, json\r\n"

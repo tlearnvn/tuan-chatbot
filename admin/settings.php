@@ -266,7 +266,19 @@ admin_head('Cấu hình web', 'settings');
         <tr><td>cURL</td><td><?= function_exists('curl_init') ? '✅ Có (' . e(curl_version()['version']) . ')' : '❌ Không có — bắt buộc phải bật' ?></td></tr>
         <tr><td>OpenSSL</td><td><?= function_exists('openssl_encrypt') ? '✅ Có' : '⚠️ Không có — API key sẽ không được mã hoá' ?></td></tr>
         <tr><td>ZipArchive</td><td><?= class_exists('ZipArchive') ? '✅ Có (đọc được docx/xlsx/pptx)' : '⚠️ Không có' ?></td></tr>
-        <tr><td>Thư mục uploads</td><td><?= is_writable(upload_path()) ? '✅ Ghi được' : '❌ Không ghi được — hãy đặt quyền 755' ?></td></tr>
+        <tr><td>Nơi lưu tệp đính kèm</td>
+            <td>🗄️ Trong cơ sở dữ liệu — <?= e(fmt_bytes(storage_total_bytes())) ?>
+                (<?= number_format((int)db_value('SELECT COUNT(*) FROM `attachments`', [], 0), 0, ',', '.') ?> tệp,
+                 khối <?= e(fmt_bytes(storage_chunk_size())) ?>)</td></tr>
+        <tr><td>Nơi lưu phiên đăng nhập</td>
+            <td><?= db_table_exists('sessions')
+                ? '🗄️ Trong cơ sở dữ liệu — ' . number_format(count(session_list_active(500)), 0, ',', '.') . ' phiên đang hoạt động'
+                : '📁 File trên đĩa (chưa có bảng sessions)' ?></td></tr>
+        <tr><td>max_allowed_packet của MySQL</td>
+            <td><?= e(fmt_bytes((int)db_value('SELECT @@max_allowed_packet', [], 0))) ?>
+                — giới hạn dung lượng mỗi lần ghi vào CSDL</td></tr>
+        <tr><td>Số tệp ghi ra đĩa</td>
+            <td>✅ Không có — ứng dụng chỉ đọc mã nguồn, nên số inode luôn cố định</td></tr>
       </tbody>
     </table>
   </div>

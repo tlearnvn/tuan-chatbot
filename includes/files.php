@@ -1,9 +1,16 @@
 <?php
 /**
- * Xử lý tệp: tải lên, phân loại, trích xuất nội dung văn bản, lưu tệp AI trả về.
+ * Xử lý tệp: phân loại, trích xuất nội dung văn bản, đọc/ghi nội dung tệp.
+ *
+ * Nội dung tệp được lưu trong cơ sở dữ liệu (xem includes/storage.php) nên ứng
+ * dụng KHÔNG ghi tệp nào xuống đĩa — tránh tốn inode của shared hosting.
+ * Các hàm *_legacy_* chỉ phục vụ những bản ghi cũ từ trước khi đổi cách lưu.
  */
 
-/** Đường dẫn tuyệt đối tới thư mục uploads. */
+/**
+ * Đường dẫn tới thư mục uploads cũ. Chỉ dùng để đọc lại tệp của bản cũ,
+ * ứng dụng không còn ghi gì vào đây nữa.
+ */
 function upload_path($sub = '')
 {
     $dir = APP_ROOT . '/' . trim((string)cfg('upload_dir', 'uploads'), '/');
@@ -11,46 +18,6 @@ function upload_path($sub = '')
         $dir .= '/' . trim($sub, '/');
     }
     return $dir;
-}
-
-/** Tạo thư mục lưu theo tháng và bảo đảm có .htaccess chặn thực thi. */
-function upload_ensure_dir()
-{
-    $month = date('Y/m');
-    $dir   = upload_path($month);
-    if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
-        throw new RuntimeException('Không tạo được thư mục lưu tệp: ' . $dir);
-    }
-    $root = upload_path();
-    if (!file_exists($root . '/.htaccess')) {
-        @file_put_contents($root . '/.htaccess', file_guard_htaccess());
-    }
-    if (!file_exists($root . '/index.html')) {
-        @file_put_contents($root . '/index.html', '<!doctype html><title>403</title>Không có gì ở đây.');
-    }
-    return [$month, $dir];
-}
-
-/**
- * Nội dung .htaccess cho thư mục uploads.
- *
- * Lưu ý: php_flag chỉ hợp lệ với mod_php nên phải bọc trong <IfModule>, nếu không
- * máy chủ dùng PHP-FPM/CGI sẽ trả lỗi 500 ("Invalid command 'php_flag'").
- */
-function file_guard_htaccess()
-{
-    return "# Chặn mọi truy cập trực tiếp vào thư mục này.\n"
-        . "# Tệp chỉ được phục vụ qua api/download.php (đã kiểm tra quyền sở hữu).\n"
-        . "<IfModule mod_authz_core.c>\n  Require all denied\n</IfModule>\n"
-        . "<IfModule !mod_authz_core.c>\n  Order allow,deny\n  Deny from all\n</IfModule>\n\n"
-        . "<IfModule mod_php.c>\n  php_flag engine off\n</IfModule>\n"
-        . "<IfModule mod_php7.c>\n  php_flag engine off\n</IfModule>\n"
-        . "<IfModule mod_php8.c>\n  php_flag engine off\n</IfModule>\n\n"
-        . "<IfModule mod_mime.c>\n"
-        . "  RemoveHandler .php .php3 .php4 .php5 .php7 .php8 .phtml .phar .cgi .pl .py .jsp .asp .aspx .sh\n"
-        . "  AddType text/plain .php .php3 .php4 .php5 .php7 .php8 .phtml .phar .cgi .pl .py .jsp .asp .aspx .sh\n"
-        . "</IfModule>\n\n"
-        . "<IfModule mod_rewrite.c>\n  RewriteEngine Off\n</IfModule>\n";
 }
 
 /** Phân loại tệp thành nhóm để giao diện và bộ chuyển đổi API dùng. */
@@ -332,15 +299,20 @@ function attachment_for_user($attachmentId, $user)
     return $row;
 }
 
-/** Đường dẫn tuyệt đối của tệp đính kèm (đã chống path traversal). */
-function attachment_abs_path($row)
+/**
+ * Đường dẫn trên đĩa của tệp CŨ (bản ghi có storage = 'file').
+ * Tệp mới nằm hoàn toàn trong cơ sở dữ liệu nên hàm này trả về null.
+ */
+function attachment_legacy_path($row)
 {
+    if (($row['storage'] ?? 'db') !== 'file' || (string)$row['stored_name'] === '') {
+        return null;
+    }
     $stored = ltrim(str_replace('\\', '/', (string)$row['stored_name']), '/');
     if (strpos($stored, '..') !== false) {
         return null;
     }
-    $path = upload_path($stored);
-    $real = realpath($path);
+    $real = realpath(upload_path($stored));
     $base = realpath(upload_path());
     if ($real === false || $base === false || strpos($real, $base) !== 0) {
         return null;
@@ -349,58 +321,132 @@ function attachment_abs_path($row)
 }
 
 /**
- * Lưu dữ liệu nhị phân do AI trả về thành tệp tải xuống được.
+ * Đọc toàn bộ nội dung của một tệp đính kèm.
  *
- * @return array Bản ghi attachment vừa tạo.
+ * @param array    $row       Bản ghi bảng attachments
+ * @param int|null $maxBytes  Vượt mức này thì trả về null (tránh hết bộ nhớ)
+ * @return string|null
+ */
+function attachment_binary($row, $maxBytes = null)
+{
+    if (($row['storage'] ?? 'db') === 'file') {
+        $path = attachment_legacy_path($row);
+        if (!$path || !is_file($path)) {
+            return null;
+        }
+        if ($maxBytes !== null && filesize($path) > $maxBytes) {
+            return null;
+        }
+        $data = @file_get_contents($path);
+        return $data === false ? null : $data;
+    }
+    return storage_get($row['id'], $maxBytes);
+}
+
+/** Đẩy nội dung tệp ra trình duyệt, dùng chung cho cả tệp mới và tệp cũ. */
+function attachment_passthru($row)
+{
+    if (($row['storage'] ?? 'db') === 'file') {
+        $path = attachment_legacy_path($row);
+        if (!$path || !is_file($path)) {
+            return 0;
+        }
+        $handle = fopen($path, 'rb');
+        if (!$handle) {
+            return 0;
+        }
+        $sent = fpassthru($handle);
+        fclose($handle);
+        return (int)$sent;
+    }
+    return storage_passthru($row['id']);
+}
+
+/** Dung lượng thực tế của tệp đính kèm. */
+function attachment_size($row)
+{
+    if (($row['storage'] ?? 'db') === 'file') {
+        $path = attachment_legacy_path($row);
+        return ($path && is_file($path)) ? (int)filesize($path) : 0;
+    }
+    return (int)$row['size'] ?: storage_size($row['id']);
+}
+
+/** Nội dung tệp còn tồn tại không? */
+function attachment_available($row)
+{
+    if (($row['storage'] ?? 'db') === 'file') {
+        $path = attachment_legacy_path($row);
+        return $path !== null && is_file($path);
+    }
+    return storage_exists($row['id']);
+}
+
+/**
+ * Lưu dữ liệu nhị phân do AI trả về vào cơ sở dữ liệu, thành tệp tải xuống được.
+ *
+ * @return array Thông tin tệp vừa tạo (dùng cho sự kiện SSE và giao diện).
  */
 function store_output_file($userId, $conversationId, $binary, $mime, $suggestedName = '')
 {
-    list($month, $dir) = upload_ensure_dir();
-
     $ext = $suggestedName !== '' ? strtolower(pathinfo($suggestedName, PATHINFO_EXTENSION)) : '';
     if ($ext === '') {
         $ext = ext_from_mime($mime);
     }
+    $ext = preg_replace('/[^a-z0-9]/i', '', $ext) ?: 'bin';
+
     $base = $suggestedName !== ''
         ? pathinfo(safe_filename($suggestedName), PATHINFO_FILENAME)
-        : 'ai-output-' . date('His');
+        : 'ai-output-' . date('Ymd-His');
     $base = preg_replace('/[^\p{L}\p{N}\-_. ]+/u', '', $base);
     $base = trim($base) !== '' ? $base : 'ai-output';
 
-    $stored = $month . '/' . date('Ymd-His') . '-' . bin2hex(random_bytes(6)) . '.' . preg_replace('/[^a-z0-9]/i', '', $ext);
-    if (@file_put_contents(upload_path($stored), $binary) === false) {
-        throw new RuntimeException('Không ghi được tệp kết quả.');
-    }
-
+    $name = $base . '.' . $ext;
     $kind = file_kind($mime, $ext);
+    $size = strlen($binary);
+
     $id = db_insert('attachments', [
         'user_id'         => (int)$userId,
         'conversation_id' => $conversationId ? (int)$conversationId : null,
         'message_id'      => null,
         'direction'       => 'out',
-        'original_name'   => $base . '.' . $ext,
-        'stored_name'     => $stored,
+        'original_name'   => $name,
+        'storage'         => 'db',
+        'stored_name'     => '',
         'mime'            => mb_substr($mime, 0, 160),
-        'size'            => strlen($binary),
+        'size'            => $size,
         'kind'            => $kind,
         'extracted_text'  => null,
         'created_at'      => now_vn(),
     ]);
 
+    try {
+        storage_put($id, $binary);
+    } catch (Exception $ex) {
+        // Không lưu được nội dung thì bỏ luôn bản ghi để không còn tệp "rỗng".
+        db_run('DELETE FROM `attachments` WHERE `id` = ?', [$id]);
+        throw new RuntimeException('Không lưu được tệp kết quả vào cơ sở dữ liệu: ' . $ex->getMessage());
+    }
+
     return [
-        'id'    => $id,
-        'name'  => $base . '.' . $ext,
-        'mime'  => $mime,
-        'size'  => strlen($binary),
-        'kind'  => $kind,
-        'url'   => 'api/download.php?id=' . $id,
+        'id'   => $id,
+        'name' => $name,
+        'mime' => $mime,
+        'size' => $size,
+        'kind' => $kind,
+        'url'  => 'api/download.php?id=' . $id,
     ];
 }
 
-/** Xoá tệp vật lý của một attachment. */
+/**
+ * Xoá phần nội dung của một tệp đính kèm.
+ *
+ * Với tệp trong cơ sở dữ liệu, khoá ngoại đã tự xoá các khối khi bản ghi
+ * attachments bị xoá — hàm này chỉ cần thiết cho tệp cũ còn nằm trên đĩa.
+ */
 function delete_attachment_file($row)
 {
-    $path = attachment_abs_path($row);
+    $path = attachment_legacy_path($row);
     if ($path && is_file($path)) {
         @unlink($path);
     }

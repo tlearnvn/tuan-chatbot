@@ -70,7 +70,16 @@ if (cfg('debug')) {
 }
 
 // ---------------------------------------------------------------------------
-// Session
+// Nạp các thành phần cần trước khi mở session
+// ---------------------------------------------------------------------------
+require_once APP_INC . '/helpers.php';
+require_once APP_INC . '/crypto.php';
+require_once APP_INC . '/db.php';
+require_once APP_INC . '/session_db.php';
+
+// ---------------------------------------------------------------------------
+// Session — lưu trong cơ sở dữ liệu để không sinh file trên đĩa (đỡ tốn inode).
+// Nếu chưa cài đặt xong (chưa có bảng `sessions`) thì tạm dùng cơ chế mặc định.
 // ---------------------------------------------------------------------------
 if (session_status() !== PHP_SESSION_ACTIVE && PHP_SAPI !== 'cli') {
     $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -87,15 +96,16 @@ if (session_status() !== PHP_SESSION_ACTIVE && PHP_SAPI !== 'cli') {
         'samesite' => 'Lax',
     ]);
     ini_set('session.use_strict_mode', '1');
+
+    // Phải đăng ký bộ xử lý TRƯỚC session_start().
+    session_use_database();
     session_start();
 }
 
 // ---------------------------------------------------------------------------
-// Nạp các thành phần
+// Nạp phần còn lại
 // ---------------------------------------------------------------------------
-require_once APP_INC . '/helpers.php';
-require_once APP_INC . '/crypto.php';
-require_once APP_INC . '/db.php';
 require_once APP_INC . '/settings.php';
 require_once APP_INC . '/auth.php';
+require_once APP_INC . '/storage.php';
 require_once APP_INC . '/files.php';

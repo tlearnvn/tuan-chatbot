@@ -143,6 +143,13 @@ $systemPrompt = ai_build_system_prompt($endpoint, $user);
 // =============================================================================
 @set_time_limit(max(60, (int)$endpoint['timeout']) + 60);
 ignore_user_abort(true);          // vẫn lưu được nội dung dở nếu người dùng thoát
+
+// Không cần ghi gì vào phiên nữa. Đóng sớm để trong lúc phát luồng (có thể tới
+// vài phút) các request khác của cùng người dùng không bị chờ khoá phiên.
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
+
 @ini_set('zlib.output_compression', '0');
 @ini_set('output_buffering', '0');
 @ini_set('implicit_flush', '1');

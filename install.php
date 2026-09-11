@@ -33,7 +33,6 @@ $notice = '';
 /** Danh sách yêu cầu hệ thống. */
 function install_requirements()
 {
-    $uploadDir = APP_ROOT . '/uploads';
     $configDir = APP_ROOT . '/config';
     return [
         ['PHP phiên bản 7.4 trở lên', version_compare(PHP_VERSION, '7.4.0', '>='), PHP_VERSION, true],
@@ -45,25 +44,19 @@ function install_requirements()
         ['Phần mở rộng ZipArchive',   class_exists('ZipArchive'), class_exists('ZipArchive') ? 'có' : 'thiếu', false],
         ['Phần mở rộng fileinfo',     function_exists('finfo_open'), function_exists('finfo_open') ? 'có' : 'thiếu', false],
         ['Thư mục config/ ghi được',  is_writable($configDir), is_writable($configDir) ? 'ghi được' : 'không ghi được', true],
-        ['Thư mục uploads/ ghi được', is_dir($uploadDir) ? is_writable($uploadDir) : is_writable(APP_ROOT),
-            (is_dir($uploadDir) ? (is_writable($uploadDir) ? 'ghi được' : 'không ghi được') : 'sẽ được tạo'), true],
+        // Không cần thư mục uploads: tệp đính kèm và phiên đăng nhập đều nằm
+        // trong cơ sở dữ liệu nên ứng dụng không ghi tệp nào xuống đĩa.
     ];
 }
 
-/** Chạy toàn bộ lệnh trong sql/schema.sql. */
+/**
+ * Chạy toàn bộ lệnh trong sql/schema.sql.
+ * Bộ tách câu lệnh (db_split_sql) hiểu chuỗi và chú thích nên dấu chấm phẩy
+ * nằm trong phần COMMENT của cột không làm câu lệnh bị cắt sai.
+ */
 function install_run_schema(PDO $pdo)
 {
-    $sql = file_get_contents(APP_ROOT . '/sql/schema.sql');
-    if ($sql === false) {
-        throw new RuntimeException('Không đọc được file sql/schema.sql.');
-    }
-    // Bỏ dòng chú thích rồi tách theo dấu chấm phẩy.
-    $sql = preg_replace('/^\s*--.*$/m', '', $sql);
-    foreach (array_filter(array_map('trim', explode(';', $sql))) as $statement) {
-        if ($statement !== '') {
-            $pdo->exec($statement);
-        }
-    }
+    return db_run_sql_file(APP_ROOT . '/sql/schema.sql', $pdo);
 }
 
 // =============================================================================
@@ -103,7 +96,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyInstalled) {
                      . "    'db_charset' => 'utf8mb4',\n\n"
                      . "    // Khoá mã hoá API key — KHÔNG đổi sau khi đã lưu key.\n"
                      . "    'app_key'    => " . var_export($appKey, true) . ",\n\n"
-                     . "    'timezone'   => 'Asia/Ho_Chi_Minh',\n"
+                     . "    'timezone'   => 'Asia/Ho_Chi_Minh',\n\n"
+                     . "    // Thư mục tệp cũ — chỉ để đọc lại dữ liệu từ bản trước khi\n"
+                     . "    // chuyển sang lưu tệp trong cơ sở dữ liệu. Bản mới không ghi vào đây.\n"
                      . "    'upload_dir' => 'uploads',\n"
                      . "    'debug'      => false,\n"
                      . "];\n";
@@ -489,7 +484,7 @@ layout_head('Cài đặt hệ thống');
         <strong>⚠️ Việc cần làm ngay để bảo mật:</strong>
         <ol style="margin:.5rem 0 0;padding-left:1.3rem">
           <li>Xoá file <code class="inline-code">install.php</code> khỏi hosting.</li>
-          <li>Kiểm tra thư mục <code class="inline-code">uploads/</code> đã có file <code class="inline-code">.htaccess</code>.</li>
+          <li>Bảo đảm thư mục <code class="inline-code">config/</code> không truy cập được từ web (đã có <code class="inline-code">.htaccess</code> sẵn).</li>
           <li>Bật HTTPS cho tên miền (Let's Encrypt miễn phí trong cPanel).</li>
         </ol>
       </div>

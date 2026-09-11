@@ -21,7 +21,9 @@ return [
     // ---- Múi giờ (mặc định giờ Việt Nam) ----
     'timezone'   => 'Asia/Ho_Chi_Minh',
 
-    // ---- Đường dẫn thư mục lưu file tải lên (tương đối với thư mục gốc) ----
+    // ---- Thư mục tệp CŨ (chỉ để đọc lại) ----
+    // Từ phiên bản 1.1.0, nội dung tệp được lưu trong cơ sở dữ liệu để không tốn
+    // inode của hosting. Giá trị này chỉ dùng để đọc lại tệp của bản cũ.
     'upload_dir' => 'uploads',
 
     // ---- Gỡ lỗi: bật khi phát triển, TẮT khi chạy thật ----

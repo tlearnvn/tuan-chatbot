@@ -165,38 +165,43 @@ function ai_message_parts($message, $endpoint)
     foreach ($atts as $att) {
         $ext  = strtolower(pathinfo($att['original_name'], PATHINFO_EXTENSION));
         $kind = $att['kind'];
-        $path = attachment_abs_path($att);
         $size = (int)$att['size'];
 
-        $inlineable = $path && is_file($path) && $size > 0 && $size <= ai_max_inline_bytes();
+        // Chỉ nhúng được khi kích thước còn trong ngưỡng an toàn về bộ nhớ.
+        $inlineable = $size > 0 && $size <= ai_max_inline_bytes();
 
-        if ($kind === 'image' && $canVision && $inlineable) {
-            $binaries[] = [
-                'kind' => 'image',
-                'mime' => $att['mime'] ?: mime_from_ext($ext),
-                'data' => base64_encode(file_get_contents($path)),
-                'name' => $att['original_name'],
-            ];
-            continue;
-        }
+        // Nội dung đọc từ cơ sở dữ liệu, chỉ nạp khi thật sự cần nhúng.
+        $wantsBinary = $inlineable && (
+            ($kind === 'image' && $canVision)
+            || ($kind === 'pdf' && $canFiles && in_array($type, ['openai', 'anthropic', 'gemini'], true))
+            || (($kind === 'audio' || $kind === 'video') && $canFiles && $type === 'gemini')
+        );
+        $raw = $wantsBinary ? attachment_binary($att, ai_max_inline_bytes()) : null;
 
-        if ($kind === 'pdf' && $canFiles && $inlineable && in_array($type, ['openai', 'anthropic', 'gemini'], true)) {
-            $binaries[] = [
-                'kind' => 'document',
-                'mime' => 'application/pdf',
-                'data' => base64_encode(file_get_contents($path)),
-                'name' => $att['original_name'],
-            ];
-            continue;
-        }
-
-        if (($kind === 'audio' || $kind === 'video') && $canFiles && $inlineable && $type === 'gemini') {
-            $binaries[] = [
-                'kind' => 'media',
-                'mime' => $att['mime'] ?: mime_from_ext($ext),
-                'data' => base64_encode(file_get_contents($path)),
-                'name' => $att['original_name'],
-            ];
+        if ($raw !== null && $raw !== '') {
+            if ($kind === 'image') {
+                $binaries[] = [
+                    'kind' => 'image',
+                    'mime' => $att['mime'] ?: mime_from_ext($ext),
+                    'data' => base64_encode($raw),
+                    'name' => $att['original_name'],
+                ];
+            } elseif ($kind === 'pdf') {
+                $binaries[] = [
+                    'kind' => 'document',
+                    'mime' => 'application/pdf',
+                    'data' => base64_encode($raw),
+                    'name' => $att['original_name'],
+                ];
+            } else {
+                $binaries[] = [
+                    'kind' => 'media',
+                    'mime' => $att['mime'] ?: mime_from_ext($ext),
+                    'data' => base64_encode($raw),
+                    'name' => $att['original_name'],
+                ];
+            }
+            unset($raw);   // giải phóng bộ nhớ ngay, tránh giữ hai bản của tệp lớn
             continue;
         }
 

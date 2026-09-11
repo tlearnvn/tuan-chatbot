@@ -104,6 +104,108 @@ function db_update($table, array $data, $where, array $whereParams = [])
     return db_run($sql, array_merge(array_values($data), $whereParams))->rowCount();
 }
 
+/**
+ * Tách một tệp SQL thành từng câu lệnh riêng.
+ *
+ * Bộ tách hiểu chuỗi trong dấu nháy đơn/kép, tên trong dấu backtick và các kiểu
+ * chú thích (-- , # , C-style) nên dấu chấm phẩy nằm trong chuỗi hay chú thích
+ * sẽ không làm câu lệnh bị cắt sai.
+ *
+ * @return string[] Danh sách câu lệnh đã bỏ khoảng trắng hai đầu
+ */
+function db_split_sql($sql)
+{
+    $statements = [];
+    $buffer     = '';
+    $length     = strlen($sql);
+    $i          = 0;
+
+    while ($i < $length) {
+        $char = $sql[$i];
+        $next = $i + 1 < $length ? $sql[$i + 1] : '';
+
+        // Chú thích một dòng: -- hoặc #
+        if (($char === '-' && $next === '-') || $char === '#') {
+            $end = strpos($sql, "\n", $i);
+            $i   = $end === false ? $length : $end + 1;
+            $buffer .= "\n";
+            continue;
+        }
+        // Chú thích nhiều dòng: /* ... */
+        if ($char === '/' && $next === '*') {
+            $end = strpos($sql, '*/', $i + 2);
+            $i   = $end === false ? $length : $end + 2;
+            continue;
+        }
+        // Chuỗi hoặc tên có dấu bao — copy nguyên vẹn tới dấu đóng.
+        if ($char === "'" || $char === '"' || $char === '`') {
+            $quote   = $char;
+            $buffer .= $char;
+            $i++;
+            while ($i < $length) {
+                $c = $sql[$i];
+                if ($c === '\\' && $quote !== '`' && $i + 1 < $length) {
+                    // Ký tự thoát trong chuỗi của MySQL.
+                    $buffer .= $c . $sql[$i + 1];
+                    $i += 2;
+                    continue;
+                }
+                if ($c === $quote) {
+                    // Dấu bao nhân đôi nghĩa là chính ký tự đó, không phải kết thúc.
+                    if ($i + 1 < $length && $sql[$i + 1] === $quote) {
+                        $buffer .= $c . $c;
+                        $i += 2;
+                        continue;
+                    }
+                    $buffer .= $c;
+                    $i++;
+                    break;
+                }
+                $buffer .= $c;
+                $i++;
+            }
+            continue;
+        }
+        // Kết thúc một câu lệnh.
+        if ($char === ';') {
+            if (trim($buffer) !== '') {
+                $statements[] = trim($buffer);
+            }
+            $buffer = '';
+            $i++;
+            continue;
+        }
+
+        $buffer .= $char;
+        $i++;
+    }
+
+    if (trim($buffer) !== '') {
+        $statements[] = trim($buffer);
+    }
+    return $statements;
+}
+
+/**
+ * Chạy toàn bộ câu lệnh trong một tệp SQL.
+ *
+ * @return int Số câu lệnh đã chạy
+ */
+function db_run_sql_file($path, PDO $pdo = null)
+{
+    $sql = @file_get_contents($path);
+    if ($sql === false) {
+        throw new RuntimeException('Không đọc được tệp SQL: ' . $path);
+    }
+    $pdo = $pdo ?: db();
+    $count = 0;
+    foreach (db_split_sql($sql) as $statement) {
+        $pdo->exec($statement);
+        $count++;
+    }
+    return $count;
+}
+
 /** Kiểm tra bảng đã tồn tại chưa. */
 function db_table_exists($table)
 {
