@@ -24,6 +24,9 @@ function settings_defaults()
         'show_version'      => '1',
         'show_model_name'   => '1',
         'github_url'        => 'https://github.com/tlearnvn/tuan-chatbot',
+        'facebook_url'      => '',
+        // Liên kết mạng xã hội hiện ở chân trang: github | facebook | both | none
+        'social_link'       => 'github',
         'theme_primary'     => '#7c5cff',
         'theme_accent'      => '#ff5c9d',
         'theme_mode'        => 'light',
@@ -151,4 +154,67 @@ function allowed_extensions()
     $raw = strtolower((string)setting('allowed_ext'));
     $parts = array_filter(array_map('trim', explode(',', $raw)));
     return array_values(array_unique($parts));
+}
+
+/** Các kiểu liên kết mạng xã hội hiện ở chân trang, kèm nhãn tiếng Việt. */
+function social_link_types()
+{
+    return [
+        'github'   => 'GitHub — mã nguồn dự án',
+        'facebook' => 'Facebook — trang hoặc nhóm của bạn',
+        'both'     => 'Cả hai',
+        'none'     => 'Không hiện liên kết nào',
+    ];
+}
+
+/**
+ * Liên kết mạng xã hội sẽ vẽ ở chân trang.
+ *
+ * @return array [['key' => 'facebook', 'url' => ..., 'label' => 'Facebook'], …]
+ */
+function footer_social_links()
+{
+    $mode = (string)setting('social_link', 'github');
+    if (!array_key_exists($mode, social_link_types())) {
+        $mode = 'github';
+    }
+    if ($mode === 'none') {
+        return [];
+    }
+
+    $wanted = $mode === 'both' ? ['github', 'facebook'] : [$mode];
+    $labels = ['github' => 'GitHub', 'facebook' => 'Facebook'];
+
+    $out = [];
+    foreach ($wanted as $key) {
+        $url = trim((string)setting($key . '_url'));
+        if ($url === '') {
+            continue;
+        }
+        $out[] = ['key' => $key, 'url' => $url, 'label' => $labels[$key]];
+    }
+    return $out;
+}
+
+/** Biểu tượng SVG của một mạng xã hội (dùng ở chân trang). */
+function social_link_icon($key)
+{
+    $paths = [
+        'github' => 'M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 '
+                  . '0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 '
+                  . '1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 '
+                  . '0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 '
+                  . '1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 '
+                  . '3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 '
+                  . '8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z',
+        'facebook' => 'M16 8.05C16 3.6 12.42 0 8 0S0 3.6 0 8.05C0 12.07 2.93 15.4 6.75 16v-5.61H4.72V8.05h2.03V6.28'
+                    . 'c0-2.02 1.2-3.13 3.02-3.13.88 0 1.79.16 1.79.16v1.97h-1.01c-.99 0-1.3.62-1.3 1.26v1.51h2.22'
+                    . 'l-.36 2.34H9.25V16C13.07 15.4 16 12.07 16 8.05z',
+    ];
+    $path = $paths[$key] ?? '';
+    if ($path === '') {
+        return '';
+    }
+    return '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">'
+         . '<path d="' . $path . '"/></svg>';
 }

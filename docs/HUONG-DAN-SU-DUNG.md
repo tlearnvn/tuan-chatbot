@@ -466,9 +466,23 @@ Vì mọi dữ liệu nằm trong MySQL, đây là trang để theo dõi **dung 
 | Nhóm | Tuỳ chỉnh được |
 |---|---|
 | **Thương hiệu** | Tên website, emoji thương hiệu (làm luôn favicon), khẩu hiệu, **dòng bản quyền ở chân trang**, lời chào, 4 câu gợi ý |
-| **Màu sắc & giao diện** | Màu chính, màu nhấn, giao diện mặc định sáng/tối, hiện/ẩn số phiên bản, **hiện/ẩn tên mô hình AI**, địa chỉ GitHub |
+| **Màu sắc & giao diện** | Màu chính, màu nhấn, giao diện mặc định sáng/tối, hiện/ẩn số phiên bản, **hiện/ẩn tên mô hình AI**, **liên kết ở chân trang** |
 | **Truy cập** | Bật/tắt đăng ký, chế độ bảo trì kèm thông báo, email liên hệ |
 | **Tệp & ngữ cảnh** | Dung lượng tối đa mỗi tệp, số tệp mỗi tin nhắn, số tin nhắn ngữ cảnh, danh sách định dạng được phép |
+
+**Liên kết ở chân trang** chọn biểu tượng hiện cạnh số phiên bản — biểu tượng và
+chữ tự đổi theo lựa chọn:
+
+| Lựa chọn | Chân trang hiện |
+|---|---|
+| **GitHub** (mặc định) | Biểu tượng GitHub + chữ "GitHub", trỏ tới *Địa chỉ GitHub* |
+| **Facebook** | Biểu tượng Facebook + chữ "Facebook", trỏ tới *Địa chỉ Facebook* |
+| **Cả hai** | Hiện lần lượt cả hai liên kết |
+| **Không hiện** | Chân trang chỉ còn dòng bản quyền và số phiên bản |
+
+> Bỏ trống ô địa chỉ của mạng nào thì liên kết đó không hiện, kể cả khi đã chọn.
+> Chân trang chỉ in **số phiên bản** (vd `v1.1.4`); tên mã của phiên bản xem ở
+> trang **Lịch sử phiên bản** (`/changelog.php`).
 
 Cuối trang là bảng **Thông tin hệ thống**: phiên bản PHP, MySQL, múi giờ, có cURL /
 OpenSSL / ZipArchive hay không, dung lượng tệp trong CSDL, số phiên đang hoạt động

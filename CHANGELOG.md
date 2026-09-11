@@ -6,6 +6,13 @@ Dự án tuân theo [Semantic Versioning](https://semver.org/lang/vi/): `MAJOR.M
 Số phiên bản được hiển thị ở chân trang mọi trang web và có thể tăng tự động
 trong **Quản trị → Phiên bản** hoặc bằng lệnh `php tools/bump.php patch "ghi chú"`.
 
+## [1.1.4] — 2026-09-11
+
+- Chân trang chỉ hiện số phiên bản, bỏ tên mã cho gọn; tên mã vẫn xem được ở trang Lịch sử phiên bản và khi rê chuột vào huy hiệu phiên bản.
+- Thêm thiết lập Liên kết ở chân trang: chọn GitHub, Facebook, cả hai, hoặc không hiện — biểu tượng và chữ tự đổi theo.
+- Thêm ô Địa chỉ Facebook trong Quản trị → Cấu hình web, cạnh ô Địa chỉ GitHub.
+- Liên kết mạng xã hội ở chân trang nay hiện độc lập với thiết lập hiện số phiên bản (trước đây tắt số phiên bản là mất luôn liên kết).
+
 ## [1.1.3] — 2026-09-11 · _Đọc Được Tệp_
 
 - Sửa lỗi tệp đính kèm PDF không tới được mô hình: viết lại bộ đọc PDF (includes/pdf.php) để tra bảng /ToUnicode của phông nhúng — nay đọc được tiếng Việt trong PDF in từ Chrome, Word, Google Docs, LaTeX, kể cả PDF 1.5 có luồng đối tượng /ObjStm.

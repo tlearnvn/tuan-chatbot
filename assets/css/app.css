@@ -344,14 +344,20 @@ select {
   font-size: .84rem; color: var(--text-muted); text-align: center;
 }
 .footer-sep { opacity: .45; }
-.footer-version, .footer-gh {
+.footer-version, .footer-social {
   display: inline-flex; align-items: center; gap: .35rem;
   padding: .16em .7em; border-radius: 999px;
   background: color-mix(in srgb, var(--brand) 10%, transparent);
   color: var(--brand); font-weight: 650; font-variant-numeric: tabular-nums;
+  transition: background .2s var(--ease), color .2s var(--ease);
 }
-.footer-version:hover, .footer-gh:hover { background: color-mix(in srgb, var(--brand) 18%, transparent); color: var(--brand); }
-.version-code { opacity: .72; font-weight: 500; font-size: .92em; }
+.footer-version:hover, .footer-social:hover {
+  background: color-mix(in srgb, var(--brand) 18%, transparent); color: var(--brand);
+}
+/* Mỗi mạng xã hội giữ màu nhận diện riêng khi rê chuột. */
+.footer-social-facebook:hover {
+  background: color-mix(in srgb, #1877f2 16%, transparent); color: #1877f2;
+}
 .version-dot {
   width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
   box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent);

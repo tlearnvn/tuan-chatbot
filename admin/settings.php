@@ -8,7 +8,8 @@ $fields = [
     'site_name', 'site_tagline', 'brand_emoji', 'copyright', 'welcome_message',
     'allow_register', 'maintenance', 'maintenance_note',
     'max_upload_mb', 'max_files_per_msg', 'allowed_ext', 'history_limit',
-    'show_version', 'show_model_name', 'github_url', 'theme_primary', 'theme_accent', 'theme_mode',
+    'show_version', 'show_model_name', 'social_link', 'github_url', 'facebook_url',
+    'theme_primary', 'theme_accent', 'theme_mode',
     'suggestions', 'admin_email',
 ];
 $checkboxes = ['allow_register', 'maintenance', 'show_version', 'show_model_name'];
@@ -59,9 +60,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Mã màu phải ở dạng #RRGGBB.';
         }
     }
-    if (isset($pairs['github_url']) && $pairs['github_url'] !== ''
-        && !preg_match('#^https?://#i', $pairs['github_url'])) {
-        $errors[] = 'Địa chỉ GitHub phải bắt đầu bằng http:// hoặc https://';
+    foreach (['github_url' => 'GitHub', 'facebook_url' => 'Facebook'] as $key => $label) {
+        if (isset($pairs[$key]) && $pairs[$key] !== ''
+            && !preg_match('#^https?://#i', $pairs[$key])) {
+            $errors[] = 'Địa chỉ ' . $label . ' phải bắt đầu bằng http:// hoặc https://';
+        }
+    }
+    if (isset($pairs['social_link']) && !array_key_exists($pairs['social_link'], social_link_types())) {
+        $pairs['social_link'] = 'github';
     }
     if (isset($pairs['allowed_ext'])) {
         $list = array_filter(array_map(function ($item) {
@@ -188,10 +194,30 @@ admin_head('Cấu hình web', 'settings');
       Người dùng vẫn chọn được endpoint theo <strong>tên hiển thị</strong> mà bạn đặt.
     </span>
     <div class="field mt-2">
-      <label for="github_url">Địa chỉ GitHub của dự án</label>
-      <input type="url" id="github_url" name="github_url" value="<?= e(setting('github_url')) ?>"
-             placeholder="https://github.com/tai-khoan/ten-repo">
-      <span class="hint">Hiện thành liên kết GitHub ở chân trang, cạnh số phiên bản.</span>
+      <label for="social_link">Liên kết ở chân trang</label>
+      <select id="social_link" name="social_link">
+        <?php foreach (social_link_types() as $value => $label): ?>
+          <option value="<?= e($value) ?>" <?= setting('social_link', 'github') === $value ? 'selected' : '' ?>>
+            <?= e($label) ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+      <span class="hint">
+        Chọn biểu tượng hiện ở chân trang, cạnh số phiên bản. Đổi sang
+        <strong>Facebook</strong> thì biểu tượng và chữ cũng đổi theo.
+      </span>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label for="github_url">Địa chỉ GitHub</label>
+        <input type="url" id="github_url" name="github_url" value="<?= e(setting('github_url')) ?>"
+               placeholder="https://github.com/tai-khoan/ten-repo">
+      </div>
+      <div class="field">
+        <label for="facebook_url">Địa chỉ Facebook</label>
+        <input type="url" id="facebook_url" name="facebook_url" value="<?= e(setting('facebook_url')) ?>"
+               placeholder="https://facebook.com/trang-cua-ban">
+      </div>
     </div>
   </div>
 
