@@ -6,6 +6,12 @@ Dự án tuân theo [Semantic Versioning](https://semver.org/lang/vi/): `MAJOR.M
 Số phiên bản được hiển thị ở chân trang mọi trang web và có thể tăng tự động
 trong **Quản trị → Phiên bản** hoặc bằng lệnh `php tools/bump.php patch "ghi chú"`.
 
+## [1.1.5] — 2026-09-11
+
+- Sửa lỗi nút ẩn thanh bên: khi ẩn, cột lưới co về 0 khiến thanh bên rộng 0px, mà translateX(-100%) của phần tử rộng 0px thì bằng 0 nên nó không trượt đi đâu — chữ bên trong bị ép xuống dòng từng từ, để lại một dải nham nhở đè lên khung chat.
+- Thanh bên nay giữ nguyên bề rộng cố định khi ẩn nên nội dung không xô lệch, trượt trọn ra ngoài khung nhìn, và bề rộng cột lưới đổi mượt theo.
+- Sửa lỗi tên cuộc trò chuyện bị cắt sớm, chừa khoảng trống lớn bên phải thanh bên: ba nút đổi tên, ghim, xoá vẫn chiếm khoảng 85px dù đang trong suốt. Nay chúng chỉ chiếm chỗ khi hiện ra, tên cuộc trò chuyện rộng thêm 65% (từ 127px lên 210px).
+
 ## [1.1.4] — 2026-09-11
 
 - Chân trang chỉ hiện số phiên bản, bỏ tên mã cho gọn; tên mã vẫn xem được ở trang Lịch sử phiên bản và khi rê chuột vào huy hiệu phiên bản.

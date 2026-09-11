@@ -431,12 +431,20 @@ body.is-chat .app-footer { flex: 0 0 auto; }
      luôn nằm đúng đáy vùng chat thay vì bị đẩy ra ngoài. */
   grid-template-rows: minmax(0, 1fr);
   flex: 1; min-height: 0; overflow: hidden;
+  transition: grid-template-columns .32s var(--ease);
 }
 .chat-app.sidebar-hidden { grid-template-columns: 0 1fr; }
 
 /* --- Sidebar --- */
 .sidebar {
-  display: flex; flex-direction: column; min-width: 0;
+  display: flex; flex-direction: column;
+  /* Bề rộng CỐ ĐỊNH, không phải min-width: 0.
+     Khi ẩn, cột lưới co về 0 — nếu thanh bên co theo thì chữ bên trong bị ép
+     xuống dòng từng từ một, và translateX(-100%) của một phần tử rộng 0px lại
+     bằng đúng 0px nên nó không hề trượt đi đâu. Giữ nguyên bề rộng thì nội dung
+     không xô lệch, thanh bên trượt trọn 292px ra ngoài, phần thừa bị
+     .chat-app (overflow: hidden) cắt gọn. */
+  width: var(--sidebar-w); overflow: hidden;
   background: color-mix(in srgb, var(--surface-solid) 72%, transparent);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   border-right: 1px solid var(--border);
@@ -499,8 +507,17 @@ body.is-chat .app-footer { flex: 0 0 auto; }
 .conv-title {
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.conv-actions { display: flex; gap: .1rem; opacity: 0; transition: opacity .18s; }
-.conv-item:hover .conv-actions, .conv-item.is-active .conv-actions { opacity: 1; }
+/* Ba nút ✏️ 📌 🗑️ chỉ chiếm chỗ khi thật sự hiện ra.
+   Trước đây chúng luôn giữ khoảng 85px dù đang trong suốt, nên tên cuộc trò
+   chuyện bị cắt sớm và chừa một khoảng trống lớn bên phải thanh bên. */
+.conv-actions {
+  display: flex; gap: .1rem; flex: 0 0 auto;
+  max-width: 0; overflow: hidden; opacity: 0;
+  transition: max-width .22s var(--ease), opacity .18s;
+}
+.conv-item:hover .conv-actions, .conv-item.is-active .conv-actions {
+  max-width: 96px; opacity: 1;
+}
 .conv-act {
   width: 26px; height: 26px; display: grid; place-items: center;
   border: 0; background: none; cursor: pointer; border-radius: 8px;

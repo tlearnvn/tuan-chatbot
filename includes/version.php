@@ -6,7 +6,7 @@
  * KHÔNG sửa tay định dạng các hằng số bên dưới (script bump dựa vào regex).
  */
 
-define('APP_VERSION', '1.1.4');
+define('APP_VERSION', '1.1.5');
 define('APP_VERSION_DATE', '2026-09-11');
 define('APP_CODENAME', 'Đọc Được Tệp');
 define('APP_NAME_DEFAULT', 'Tuấn Chatbot');
